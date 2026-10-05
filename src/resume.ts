@@ -146,7 +146,7 @@ export function resumeCheckpoint(resume: SavedCampaignResume | null) {
 }
 
 export function resumeSummary(resume: SavedCampaignResume | null) {
-  if (!resume?.lastPlayedAt) return "Not played through CCM yet";
+  if (!resume?.lastPlayedAt) return "";
   const date = new Date(resume.lastPlayedAt * 1000).toLocaleDateString();
   const save = resume.latestSave;
   if (resume.lastPlayedSource === "legacy-ccm-snapshot") {

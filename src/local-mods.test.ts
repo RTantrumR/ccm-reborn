@@ -98,15 +98,17 @@ describe("add-local-mod dialog", () => {
     suggestedId: "local-my-hots-mod",
   };
 
-  it("prefills editable fields, escapes titles and states what the hash proves", () => {
+  it("prefills editable fields, escapes titles and keeps hashes and game paths out of view", () => {
     const html = renderAddLocalDialog(inspection, { title: inspection.title, author: "", version: "" }, "/tmp/mod.zip");
     expect(html).toContain('id="local-mod-title"');
     expect(html).toContain('id="local-mod-author"');
     expect(html).toContain('id="local-mod-version"');
     expect(html).toContain("My &lt;HotS&gt; Mod");
     expect(html).not.toContain("<HotS>");
-    expect(html).toContain("SHA-256 FROM YOUR FILE");
-    expect(html).toContain("Maps/Campaign/swarm");
+    // Players can't act on a checksum or an install path; the check still runs.
+    expect(html).not.toContain("SHA-256");
+    expect(html).not.toContain("c".repeat(64));
+    expect(html).not.toContain("Maps/Campaign/swarm");
     // Adding must never read as installing.
     expect(html).toContain("Adding changes nothing in StarCraft II");
   });

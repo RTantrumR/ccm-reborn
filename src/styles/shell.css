@@ -62,9 +62,36 @@ nav { margin-top: var(--space-2); display: grid; gap: 2px; }
 .dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); }
 .dot.muted { background: var(--status-warn); }
 
-main { min-width: 0; width: 100%; max-width: 1480px; margin: 0 auto; padding: var(--space-6) clamp(24px, 4vw, 64px); }
-main > header { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: var(--space-5); }
+main { min-width: 0; width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 clamp(24px, 4vw, 64px) var(--space-6); }
+/* Sticky page header: title, actions and the StarCraft II banner stay in
+   view on every page. game-banner.ts publishes its height as --header-h. */
+main > header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3) 20px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-6) 0 var(--space-3);
+  background: var(--bg-page);
+}
 h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
+.game-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--bg-row);
+  border: 1px solid var(--border-accent);
+  border-left: 2px solid var(--status-warn);
+  border-radius: var(--radius);
+}
+.game-banner p { flex: 1; margin: 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
+.banner-close { padding: 0 8px; color: var(--text-muted); background: none; border: 0; border-radius: var(--radius); font-size: 22px; line-height: 1.3; }
+.banner-close:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .header-actions { display: flex; align-items: center; gap: var(--space-2); }
 
 /* Status bar: one line per message, the left edge carries the kind. */
@@ -73,7 +100,7 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
   padding: 10px var(--space-3);
   color: var(--text-body);
   background: var(--bg-row);
@@ -120,6 +147,6 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 @media (max-width: 700px) {
   #app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  main { padding: 22px var(--space-4); }
-  main > header { align-items: flex-start; flex-wrap: wrap; }
+  main { padding: 0 var(--space-4) 22px; }
+  main > header { grid-template-columns: 1fr; align-items: start; padding-top: 22px; }
 }

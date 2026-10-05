@@ -21,13 +21,11 @@ export type LibraryContext = {
 
 function renderInstallRow(campaign: Campaign, context: LibraryContext) {
   const working = context.busy && context.installingCampaignId === campaign.id;
-  const disabled = !context.gameDir || context.busy ? "disabled" : "";
+  const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"' : context.busy ? "disabled" : "";
   const button = context.isCurrentCatalogCampaign(campaign)
     ? `<button class="ghost" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : "Repair installation"}</button>`
     : `<button class="primary install" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : `Install v${escapeHtml(campaign.version)}`}</button>`;
-  if (context.gameDir) return `<div class="install-row">${button}</div>`;
-  return `<div class="install-row">${button}<button class="ghost" data-action="choose-directory">Choose StarCraft II folder…</button></div>
-    <p class="install-blocked">Installing needs your StarCraft II folder. Auto-detection didn't find it.</p>`;
+  return `<div class="install-row">${button}</div>`;
 }
 
 function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
@@ -47,7 +45,7 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
         <div><small>CAMPAIGN</small><strong>${escapeHtml(campaign.requirements.campaign)}</strong></div>
       </div>
       ${tags}
-      <section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${current ? escapeHtml(current.title) : "StarCraft II directory not selected"}</strong><span>${current ? `${escapeHtml(current.author)} · ${escapeHtml(current.version)}` : "Auto-detection runs when CCM Reborn starts."}</span></div><button class="ghost open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button></section>
+      ${current ? `<section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${escapeHtml(current.title)}</strong><span>${escapeHtml(current.author)} · ${escapeHtml(current.version)}</span></div><button class="ghost open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button></section>` : ""}
       ${renderInstallRow(campaign, context)}
     </div>`;
 }

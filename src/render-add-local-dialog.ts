@@ -28,20 +28,16 @@ export function renderAddLocalDialog(
         <h2>${escapeHtml(inspection.title)}</h2>
         <div class="metadata">
           <div><small>CAMPAIGN</small><strong>${escapeHtml(inspection.campaign)}</strong></div>
-          <div><small>PACKAGE</small><strong>${formatBytes(inspection.size)}</strong></div>
+          <div><small>SIZE</small><strong>${formatBytes(inspection.size)}</strong></div>
           <div><small>FILES</small><strong>${inspection.files}</strong></div>
         </div>
         ${field("title", "Name", "How this mod should appear in your list")}
         ${field("author", "Author", "Leave empty if the archive does not say")}
         ${field("version", "Version", "Leave empty if the archive does not say")}
         <p class="dialog-note">
-          CCM read <code>metadata.txt</code> inside the archive and will install this mod into
-          <strong>${escapeHtml(inspection.targetPath)}</strong>. It keeps its own copy of
-          <code>${escapeHtml(archivePath)}</code>, so the mod keeps working after you move or delete that file.
-          The SHA-256 below is taken from your file: it protects the copy from changing silently,
-          it does not vouch for where the mod came from.
+          CCM keeps its own copy of <code>${escapeHtml(archivePath)}</code>, so the mod keeps working
+          after you move or delete that file.
         </p>
-        <p class="dialog-hash"><small>SHA-256 FROM YOUR FILE</small><code>${escapeHtml(inspection.sha256)}</code></p>
         <p class="dialog-note">Adding changes nothing in StarCraft II. You choose Install afterwards.</p>
         <div class="dialog-actions">
           <button class="ghost" value="cancel" data-action="cancel-local-mod">Cancel</button>

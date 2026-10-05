@@ -12,6 +12,7 @@ import { isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
+import { renderGameBanner } from "./game-banner";
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
 import { applyCampaignInstall, planCampaignInstall } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
@@ -81,7 +82,7 @@ function render() {
         <div><h1>${page === "dashboard" ? "Campaigns" : "Library"}</h1></div>
         <div class="header-actions">
           <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
-        </div>
+        </div>${renderGameBanner(gameDir)}
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath })}
       ${renderLegacyMigration(catalog, savedResumes, profileDir, busy)}

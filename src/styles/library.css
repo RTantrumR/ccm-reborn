@@ -26,9 +26,10 @@
 .campaign-copy p { margin: 0; color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
 .installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-label) var(--font-body); letter-spacing: .06em; }
 
-/* Sticky so a pick far down the list visibly lands. Its own scroll only
-   matters when the window is shorter than the pane; render() resets it. */
-.campaign-detail { position: sticky; top: var(--space-5); max-height: calc(100vh - 2 * var(--space-5)); overflow-y: auto; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
+/* Sticky under the sticky header, so a pick far down the list visibly lands.
+   Its own scroll only matters when the window is shorter than the pane;
+   render() resets it. */
+.campaign-detail { position: sticky; top: var(--header-h, 90px); max-height: calc(100vh - var(--header-h, 90px) - var(--space-4)); overflow-y: auto; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
 .detail-head { padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 2px solid var(--faction, var(--accent)); }
 .detail-head .eyebrow { color: var(--faction, var(--accent)); }
 .byline { margin: 6px 0 0; color: var(--text-body); font: 500 var(--fs-small) var(--font-body); }
@@ -51,7 +52,6 @@
 .current-campaign span { color: var(--text-body); font: var(--fs-meta) var(--font-body); }
 .open-battle-net { flex: 0 0 auto; }
 .install-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-5); }
-.install-blocked { margin: var(--space-2) 0 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
 .current-campaign + .install-row { margin-top: 14px; }
 .install { min-width: 145px; }
 .safety-note { margin: var(--space-4) 0 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }

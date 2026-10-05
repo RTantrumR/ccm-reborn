@@ -37,6 +37,4 @@ dialog::backdrop { background: rgba(10, 11, 13, .72); backdrop-filter: blur(3px)
 #add-local-mod-dialog .metadata small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
 #add-local-mod-dialog .metadata strong { color: var(--text-hi); font-size: var(--fs-small); }
 .dialog-note { margin: 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
-.dialog-note code, .dialog-hash code { color: var(--text-hi); font: var(--fs-label) var(--font-mono); overflow-wrap: anywhere; }
-.dialog-hash { display: grid; gap: var(--space-1); margin: 0; }
-.dialog-hash small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
+.dialog-note code { color: var(--text-hi); font: var(--fs-label) var(--font-mono); overflow-wrap: anywhere; }
