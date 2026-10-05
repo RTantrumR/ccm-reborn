@@ -10,3 +10,4 @@ dev-catalog/packages/*
 .wine-check*/
 .tmp
 reviews
+docs/
