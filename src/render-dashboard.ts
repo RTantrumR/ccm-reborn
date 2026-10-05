@@ -1,12 +1,18 @@
 import type { Campaign, Catalog, Inspection, SavedCampaignResume } from "./types";
 import { campaignSlot, formatBytes, isCommunityCampaign } from "./domain";
 import { resumeCheckpoint, resumeFor, resumeInstruction, resumeSummary, sortCampaignsByRecentPlay } from "./resume";
+// The game's own emblems, extracted from StarCraft II: the expansion icons, and the
+// Nova Covert Ops decal (NCO has no expansion icon).
+import wingsLogo from "./assets/campaigns/wings-of-liberty.png";
+import swarmLogo from "./assets/campaigns/heart-of-the-swarm.png";
+import voidLogo from "./assets/campaigns/legacy-of-the-void.png";
+import novaLogo from "./assets/campaigns/nova-covert-ops.png";
 
 const slots = [
-  { id: "wings-of-liberty", title: "Wings of Liberty", short: "WOL" },
-  { id: "heart-of-the-swarm", title: "Heart of the Swarm", short: "HOTS" },
-  { id: "legacy-of-the-void", title: "Legacy of the Void", short: "LOTV" },
-  { id: "nova-covert-ops", title: "Nova Covert Ops", short: "NCO" },
+  { id: "wings-of-liberty", title: "Wings of Liberty", short: "WOL", logo: wingsLogo },
+  { id: "heart-of-the-swarm", title: "Heart of the Swarm", short: "HOTS", logo: swarmLogo },
+  { id: "legacy-of-the-void", title: "Legacy of the Void", short: "LOTV", logo: voidLogo },
+  { id: "nova-covert-ops", title: "Nova Covert Ops", short: "NCO", logo: novaLogo },
 ] as const;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
@@ -45,7 +51,7 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
   return `
     <article class="campaign-slot faction-${slot.id}">
       <header class="slot-header">
-        <div class="slot-sigil">${slot.short.slice(0, 1)}</div>
+        <img class="slot-sigil" src="${slot.logo}" alt="">
         <div><p class="eyebrow">${slot.short}</p><h2>${slot.title}</h2></div>
         ${current ? `<span class="slot-state ${current.isModified ? "custom" : "original"}">${current.isModified ? "Custom" : "Original"}</span>` : ""}
       </header>

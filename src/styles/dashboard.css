@@ -5,7 +5,7 @@
 .slot-header { display: flex; align-items: center; gap: var(--space-3); padding: 14px var(--space-4); border-bottom: 1px solid var(--divider); }
 .slot-header .eyebrow { color: var(--faction); }
 .slot-header h2 { margin: 2px 0 0; font-size: 17px; }
-.slot-sigil { display: grid; place-items: center; width: 32px; height: 32px; color: var(--faction); border: 1px solid var(--faction); border-radius: var(--radius); font: 600 18px var(--font-display); }
+.slot-sigil { flex: 0 0 auto; width: 40px; height: 40px; object-fit: contain; }
 .slot-state { margin-left: auto; padding: 2px 8px; border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-meta) var(--font-body); }
 .slot-state.custom { color: var(--status-ok); }
 .slot-state.original { color: var(--text-muted); }
