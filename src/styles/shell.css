@@ -97,6 +97,7 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 /* Status bar: one line per message, the left edge carries the kind. */
 .status {
   min-height: 44px;
+  scroll-margin-top: calc(var(--header-h, 90px) + var(--space-2));
   display: flex;
   align-items: flex-start;
   gap: 10px;

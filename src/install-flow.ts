@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Campaign, Catalog, DryRunPlan, InstallProgress, InstallResult } from "./types";
+import type { Campaign, Catalog, InstallProgress, InstallResult } from "./types";
 import type { InstallFailure } from "./install-status";
 
 type MessageKind = "neutral" | "success" | "error";
@@ -7,10 +7,9 @@ type InstallFlow = {
   catalog: () => Catalog | null;
   gameDir: () => string;
   profileDir: () => string;
-  pendingPlan: () => DryRunPlan | null;
   activity: () => InstallProgress | null;
+  isCurrent: (campaign: Campaign) => boolean;
   setBusy: (value: boolean) => void;
-  setPendingPlan: (value: DryRunPlan | null) => void;
   setActivity: (value: InstallProgress | null) => void;
   setCampaignId: (value: string) => void;
   setFailure: (value: InstallFailure | null) => void;
@@ -18,6 +17,13 @@ type InstallFlow = {
   inspectDirectory: () => Promise<void>;
   render: () => void;
 };
+
+const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!,
+);
+
+// The campaign waiting for the player's one confirmation, or "".
+let confirmingId = "";
 
 const pendingActivity = (phase: string, message: string): InstallProgress => ({
   operationId: "", phase, message,
@@ -38,37 +44,67 @@ function recordFailure(flow: InstallFlow, phase: string, error: unknown) {
   flow.setCampaignId("");
 }
 
-export async function planCampaignInstall(flow: InstallFlow, campaignId: string) {
-  const campaign = flow.catalog()?.campaigns.find((item) => item.id === campaignId);
-  const gameDir = flow.gameDir();
-  if (!campaign || !gameDir) return;
-  const preparing = `Preparing a safe installation plan for ${campaign.title}…`;
-  flow.setBusy(true); flow.setPendingPlan(null); flow.setCampaignId(campaign.id);
-  flow.setActivity(pendingActivity("preparing-plan", preparing)); flow.setFailure(null); flow.setMessage(preparing, "neutral"); flow.render();
-  try {
-    const result = await invoke<DryRunPlan>("plan_campaign_install", { request: requestFor(campaign, gameDir, flow.profileDir() || null) });
-    flow.setPendingPlan(result);
-    flow.setMessage(`Dry-run complete for ${campaign.title}. No files were changed.`, "success");
-  } catch (error) {
-    recordFailure(flow, "preparing-plan", error);
-  } finally {
-    flow.setBusy(false); flow.render();
-  }
+/// Install and Repair both ask once, in plain words, then install. The backend
+/// verifies the package and keeps rollback copies whether or not a dry-run ran.
+export function requestInstall(flow: InstallFlow, campaignId: string) {
+  confirmingId = campaignId;
+  flow.render();
 }
 
-export async function applyCampaignInstall(flow: InstallFlow) {
-  const plan = flow.pendingPlan();
+export function renderInstallConfirm(flow: InstallFlow) {
+  const campaign = flow.catalog()?.campaigns.find((item) => item.id === confirmingId);
+  if (!campaign) return "";
+  const repair = flow.isCurrent(campaign);
+  const base = campaign.requirements.campaign;
+  return `
+    <dialog id="install-confirm-dialog">
+      <form method="dialog" class="dialog-card">
+        <div>
+          <p class="eyebrow">${repair ? "REPAIR" : "INSTALL"}</p>
+          <h2>${escapeHtml(campaign.title)} <span class="dialog-version">v${escapeHtml(campaign.version)}</span></h2>
+        </div>
+        <p class="dialog-note">${repair
+          ? `Close StarCraft II first. CCM Reborn reinstalls this mod's files for ${escapeHtml(base)}.`
+          : `Close StarCraft II first. This replaces what you have installed for ${escapeHtml(base)}. CCM Reborn keeps a backup and your saves, so you can switch back any time.`}</p>
+        <div class="dialog-actions">
+          <button class="ghost" value="cancel" data-action="cancel-install">Cancel</button>
+          <button class="primary" value="default" data-action="confirm-install" autofocus>${repair ? "Repair" : "Install"}</button>
+        </div>
+      </form>
+    </dialog>`;
+}
+
+export function bindInstallConfirm(flow: InstallFlow, onStart: () => void) {
+  const dialog = document.querySelector<HTMLDialogElement>("#install-confirm-dialog");
+  if (!dialog) return;
+  // Esc, the Cancel button and a backdrop close all end up here.
+  dialog.addEventListener("close", () => {
+    if (dialog.returnValue === "default") return;
+    confirmingId = "";
+    flow.render();
+  });
+  dialog.querySelector("[data-action='confirm-install']")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    const campaignId = confirmingId;
+    confirmingId = "";
+    dialog.close("default");
+    onStart();
+    void installCampaign(flow, campaignId);
+  });
+  if (!dialog.open) dialog.showModal();
+}
+
+async function installCampaign(flow: InstallFlow, campaignId: string) {
+  const campaign = flow.catalog()?.campaigns.find((item) => item.id === campaignId);
   const gameDir = flow.gameDir();
   const profileDir = flow.profileDir();
-  if (!plan || !gameDir || !profileDir) return;
-  const campaign = flow.catalog()?.campaigns.find((item) => item.id === plan.campaignId);
-  if (!campaign || !window.confirm(`Apply ${campaign.title} v${campaign.version}? StarCraft II must be fully closed. CCM Reborn will use only the selected profile and keep rollback snapshots for both profile and campaign files.`)) return;
+  if (!campaign || !gameDir || !profileDir) return;
   const preparing = `Preparing ${campaign.title} for installation…`;
-  flow.setBusy(true); flow.setPendingPlan(null); flow.setCampaignId(campaign.id);
+  flow.setBusy(true); flow.setCampaignId(campaign.id);
   flow.setActivity(pendingActivity("preparing-install", preparing)); flow.setFailure(null); flow.setMessage(preparing, "neutral"); flow.render();
   try {
     const result = await invoke<InstallResult>("install_campaign", { request: requestFor(campaign, gameDir, profileDir) });
-    flow.setMessage(`Installed ${result.title} v${result.version} (${result.filesInstalled} files).`, "success");
+    flow.setMessage(`Installed ${result.title} v${result.version}. Open Battle.net and press Play.`, "success");
     flow.setActivity(null); flow.setCampaignId("");
     await flow.inspectDirectory();
   } catch (error) {

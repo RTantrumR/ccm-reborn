@@ -3,10 +3,9 @@ import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./styles.css";
 import type {
-  Catalog, DryRunPlan, GameDirectoryCandidate, Inspection,
+  Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
-import { renderPlanDialog } from "./render-plan";
 import { renderLibrary } from "./render-library";
 import { isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
@@ -14,7 +13,7 @@ import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration"
 import { renderDashboard } from "./render-dashboard";
 import { renderGameBanner } from "./game-banner";
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
-import { applyCampaignInstall, planCampaignInstall } from "./install-flow";
+import { bindInstallConfirm, renderInstallConfirm, requestInstall } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
 import { bindLocalModEvents, localModDialog, localModsHeaderButton, mergeCatalog, refreshLocalMods } from "./local-mods";
 
@@ -40,7 +39,6 @@ let message = "Getting your campaigns ready…";
 let messageKind: "neutral" | "success" | "error" = "neutral";
 let busy = false;
 let battleNetMessageTimer: number | undefined;
-let pendingPlan: DryRunPlan | null = null;
 let installActivity: InstallProgress | null = null;
 let activeInstallCampaignId = "";
 let diagnosticLogPath = "";
@@ -52,9 +50,9 @@ let settingsProfileDirDraft = profileDir;
 
 const installFlow = {
   catalog: () => catalog, gameDir: () => gameDir, profileDir: () => profileDir,
-  pendingPlan: () => pendingPlan, activity: () => installActivity,
+  activity: () => installActivity,
+  isCurrent: (campaign: Campaign) => isCurrentCatalogCampaign(campaign, inspection),
   setBusy: (value: boolean) => { busy = value; },
-  setPendingPlan: (value: DryRunPlan | null) => { pendingPlan = value; },
   setActivity: (value: InstallProgress | null) => { installActivity = value; },
   setCampaignId: (value: string) => { activeInstallCampaignId = value; },
   setFailure: (value: InstallFailure | null) => { lastInstallFailure = value; },
@@ -82,11 +80,11 @@ function render() {
         <div><h1>${page === "dashboard" ? "Campaigns" : "Library"}</h1></div>
         <div class="header-actions">
           <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
-        </div>${renderGameBanner(gameDir)}
+        </div>${renderGameBanner(gameDir, profileDir)}
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath, busy })}
       ${renderLegacyMigration(catalog, savedResumes, profileDir, busy)}
-      ${page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
+      ${page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
     </main>
     ${renderSettingsDialog({
       catalogSourceDraft: settingsCatalogSourceDraft,
@@ -95,7 +93,7 @@ function render() {
       profileDirDraft: settingsProfileDirDraft,
       showLocalDevCatalog: import.meta.env.DEV,
     })}
-    ${pendingPlan ? renderPlanDialog(pendingPlan, profileDir, busy) : ""}
+    ${renderInstallConfirm(installFlow)}
     ${localModDialog()}
   `;
   bindEvents();
@@ -103,8 +101,6 @@ function render() {
   if (addLocalDialog && !addLocalDialog.open) addLocalDialog.showModal();
   const settingsDialog = document.querySelector<HTMLDialogElement>("#settings-dialog");
   if (settingsOpen && settingsDialog && !settingsDialog.open) settingsDialog.showModal();
-  const planDialog = document.querySelector<HTMLDialogElement>("#plan-dialog");
-  if (planDialog && !planDialog.open) planDialog.showModal();
   if (scrollToInstallStatus) {
     scrollToInstallStatus = false;
     window.requestAnimationFrame(() => {
@@ -163,26 +159,12 @@ function bindEvents() {
   document.querySelector<HTMLButtonElement>("[data-action='use-cloud-catalog']")?.addEventListener("click", () => useCatalogSource(communityCatalog));
   document.querySelector<HTMLButtonElement>("[data-action='use-local-catalog']")?.addEventListener("click", () => useCatalogSource(localDevCatalog));
   document.querySelector<HTMLButtonElement>("[data-action='detect-directory']")?.addEventListener("click", () => void detectGameDirectory());
-  document.querySelector<HTMLButtonElement>("[data-action='choose-profile']")?.addEventListener("click", () => void chooseProfileDirectory());
+  document.querySelectorAll<HTMLButtonElement>("[data-action='choose-profile']").forEach((button) => button.addEventListener("click", () => void chooseProfileDirectory()));
   document.querySelector<HTMLButtonElement>("[data-action='detect-profiles']")?.addEventListener("click", () => void refreshProfiles(true));
   document.querySelectorAll<HTMLButtonElement>("[data-action='install']").forEach((button) => {
-    button.addEventListener("click", () => {
-      scrollToInstallStatus = true;
-      void planCampaignInstall(installFlow, button.dataset.campaign ?? "");
-    });
+    button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? ""));
   });
-  document.querySelectorAll<HTMLButtonElement>("[data-action='close-plan']").forEach((button) => {
-    button.addEventListener("click", () => {
-      pendingPlan = null;
-      installActivity = null;
-      activeInstallCampaignId = "";
-      render();
-    });
-  });
-  document.querySelector<HTMLButtonElement>("[data-action='apply-plan']")?.addEventListener("click", () => {
-    scrollToInstallStatus = true;
-    void applyCampaignInstall(installFlow);
-  });
+  bindInstallConfirm(installFlow, () => { scrollToInstallStatus = true; });
   document.querySelectorAll<HTMLButtonElement>("[data-action='open-battle-net']").forEach((button) => button.addEventListener("click", () => void openBattleNet()));
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
     button.addEventListener("click", () => void restoreOriginals(button.dataset.target ?? ""));

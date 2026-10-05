@@ -36,6 +36,8 @@ dialog::backdrop { background: rgba(10, 11, 13, .72); backdrop-filter: blur(3px)
 #add-local-mod-dialog .metadata > div { display: grid; gap: var(--space-1); padding: 10px; background: var(--bg-inset); border: 1px solid var(--border-accent); border-radius: var(--radius); }
 #add-local-mod-dialog .metadata small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
 #add-local-mod-dialog .metadata strong { color: var(--text-hi); font-size: var(--fs-small); }
+#install-confirm-dialog { width: min(480px, calc(100vw - 32px)); }
+.dialog-version { color: var(--text-muted); font: 500 var(--fs-small) var(--font-mono); vertical-align: middle; }
 .dialog-byline { margin: 6px 0 0; color: var(--text-body); font: 500 var(--fs-small) var(--font-body); }
 .dialog-note { margin: 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
 .dialog-note code { color: var(--text-hi); font: var(--fs-label) var(--font-mono); overflow-wrap: anywhere; }

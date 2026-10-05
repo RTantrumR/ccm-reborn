@@ -24,13 +24,16 @@ export type LibraryContext = {
   filter: string; // campaignSlot() id, or "" for every campaign
   busy: boolean;
   gameDir: string;
+  profileDir: string;
   installingCampaignId: string;
   isCurrentCatalogCampaign: (campaign: Campaign) => boolean;
 };
 
 function renderInstallRow(campaign: Campaign, context: LibraryContext) {
   const working = context.busy && context.installingCampaignId === campaign.id;
-  const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"' : context.busy ? "disabled" : "";
+  const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"'
+    : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
+    : context.busy ? "disabled" : "";
   const button = context.isCurrentCatalogCampaign(campaign)
     ? `<button class="ghost" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : "Repair installation"}</button>`
     : `<button class="primary install" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : `Install v${escapeHtml(campaign.version)}`}</button>`;
