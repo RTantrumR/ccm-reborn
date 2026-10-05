@@ -11,3 +11,4 @@ dev-catalog/packages/*
 .tmp
 reviews
 docs/
+CLAUDE.md
