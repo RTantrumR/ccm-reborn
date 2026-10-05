@@ -51,8 +51,6 @@ export type Catalog = {
   updatedAt: string;
   sourceKind: "local" | "remote" | "cached";
   campaigns: Campaign[];
-  // Local catalogs only: titles left out because their package file is missing.
-  missingPackages?: string[];
 };
 
 export type CurrentCampaign = {

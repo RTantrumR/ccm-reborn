@@ -188,7 +188,6 @@ fn local_catalog_leaves_out_mods_with_missing_packages() {
 
     let loaded = load_catalog_blocking(root.join("catalog.json").display().to_string()).unwrap();
     assert_eq!(loaded.campaigns.iter().map(|campaign| campaign.id.as_str()).collect::<Vec<_>>(), ["present"]);
-    assert_eq!(loaded.missing_packages, ["Gone Mod"]);
     let _ = fs::remove_dir_all(root);
 }
 

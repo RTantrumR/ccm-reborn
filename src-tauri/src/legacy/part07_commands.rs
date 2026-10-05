@@ -89,7 +89,6 @@ fn load_catalog_blocking(source: String) -> Result<LoadedCatalog, String> {
 
     let mut campaigns = Vec::with_capacity(catalog.campaigns.len());
     let mut ids = HashSet::new();
-    let mut missing_packages = Vec::new();
     for campaign in catalog.campaigns {
         validate_catalog_campaign(&campaign)?;
         if !ids.insert(campaign.id.clone()) {
@@ -98,10 +97,8 @@ fn load_catalog_blocking(source: String) -> Result<LoadedCatalog, String> {
         let package_source = match &local_directory {
             Some(directory) => match resolve_local_package(directory, campaign.package.path.as_deref())? {
                 Some(package) => package,
-                None => {
-                    missing_packages.push(campaign.title);
-                    continue;
-                }
+                // A local catalog's mod whose file is gone is left out quietly.
+                None => continue,
             },
             None => campaign
                 .package
@@ -138,7 +135,6 @@ fn load_catalog_blocking(source: String) -> Result<LoadedCatalog, String> {
         updated_at: catalog.updated_at,
         source_kind,
         campaigns,
-        missing_packages,
     })
 }
 

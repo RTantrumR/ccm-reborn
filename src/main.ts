@@ -365,11 +365,8 @@ async function loadCatalog() {
     cloudCatalog = await invoke<Catalog>("load_catalog", { source: catalogSource });
     catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
     selectedId ||= catalog?.campaigns[0]?.id ?? "";
-    const missing = cloudCatalog.missingPackages ?? [];
-    message = cloudCatalog.sourceKind === "cached" ? "Offline — showing the last available campaign list."
-      : missing.length === 1 ? `${missing[0]} was left out: its file is missing.`
-      : missing.length ? `${missing.length} mods were left out: their files are missing.` : "";
-    messageKind = cloudCatalog.sourceKind === "cached" || missing.length ? "neutral" : "success";
+    message = cloudCatalog.sourceKind === "cached" ? "Offline — showing the last available campaign list." : "";
+    messageKind = cloudCatalog.sourceKind === "cached" ? "neutral" : "success";
     await inspectDirectory();
   } catch (error) {
     cloudCatalog = null;
