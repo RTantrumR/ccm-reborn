@@ -1,10 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Campaign, Catalog, InstallProgress, InstallResult } from "./types";
+import type { Campaign, InstallProgress, InstallResult } from "./types";
 import type { InstallFailure } from "./install-status";
 
 type MessageKind = "neutral" | "success" | "error";
 type InstallFlow = {
-  catalog: () => Catalog | null;
+  // Catalog and local mods, plus mods only known from the install history.
+  campaign: (id: string) => Campaign | undefined;
   gameDir: () => string;
   profileDir: () => string;
   activity: () => InstallProgress | null;
@@ -52,7 +53,7 @@ export function requestInstall(flow: InstallFlow, campaignId: string) {
 }
 
 export function renderInstallConfirm(flow: InstallFlow) {
-  const campaign = flow.catalog()?.campaigns.find((item) => item.id === confirmingId);
+  const campaign = confirmingId ? flow.campaign(confirmingId) : undefined;
   if (!campaign) return "";
   const repair = flow.isCurrent(campaign);
   const base = campaign.requirements.campaign;
@@ -95,7 +96,7 @@ export function bindInstallConfirm(flow: InstallFlow, onStart: () => void) {
 }
 
 async function installCampaign(flow: InstallFlow, campaignId: string) {
-  const campaign = flow.catalog()?.campaigns.find((item) => item.id === campaignId);
+  const campaign = flow.campaign(campaignId);
   const gameDir = flow.gameDir();
   const profileDir = flow.profileDir();
   if (!campaign || !gameDir || !profileDir) return;

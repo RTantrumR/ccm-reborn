@@ -52,3 +52,15 @@
    active, so it stays quieter than CURRENT. */
 .local-pill { flex: 0 0 auto; padding: 1px 5px; color: var(--text-muted); border: 1px solid var(--border-muted); border-radius: var(--radius); font: 600 var(--fs-label)/1.4 var(--font-body); letter-spacing: .08em; }
 @media (max-width: 1100px) { .campaign-dashboard { grid-template-columns: 1fr; } }
+
+/* My Mods: what the player has installed, grouped by base campaign. */
+.mymods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+.mymods-group { padding: var(--space-3) var(--space-4) var(--space-2); background: var(--bg-row); border: 1px solid var(--border-accent); border-top: 2px solid var(--faction, var(--accent)); border-radius: var(--radius); }
+.mymods-group > .eyebrow { margin-bottom: var(--space-2); color: var(--faction, var(--accent)); }
+.mymods-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--divider); }
+.mymods-row.playing .option-title { color: var(--text-hi); }
+.mymods-gone { color: var(--text-body); font: var(--fs-meta) var(--font-body); }
+.mymods-empty { padding: var(--space-6); text-align: center; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
+.mymods-empty h2 { margin: 0 0 var(--space-2); font-size: var(--fs-card); }
+.mymods-empty p { max-width: 460px; margin: 0 auto; color: var(--text-body); line-height: 1.6; }
+@media (max-width: 1100px) { .mymods { grid-template-columns: 1fr; } }

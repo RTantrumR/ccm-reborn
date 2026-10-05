@@ -12,6 +12,7 @@ import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
 import { renderGameBanner } from "./game-banner";
+import { myModsCampaign, refreshInstalledMods, renderMyMods } from "./my-mods";
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
 import { bindInstallConfirm, renderInstallConfirm, requestInstall } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
@@ -32,7 +33,9 @@ let catalog: Catalog | null = null;
 let cloudCatalog: Catalog | null = null;
 let inspection: Inspection | null = null;
 let savedResumes: SavedCampaignResume[] = [];
-let page: "dashboard" | "library" = "dashboard";
+type Page = "dashboard" | "mymods" | "library";
+const PAGE_TITLES: Record<Page, string> = { dashboard: "Campaigns", mymods: "My Mods", library: "Library" };
+let page: Page = "dashboard";
 let selectedId = "";
 let libraryFilter = "";
 let message = "Getting your campaigns ready…";
@@ -49,7 +52,8 @@ let settingsCatalogSourceDraft = catalogSource;
 let settingsProfileDirDraft = profileDir;
 
 const installFlow = {
-  catalog: () => catalog, gameDir: () => gameDir, profileDir: () => profileDir,
+  gameDir: () => gameDir, profileDir: () => profileDir,
+  campaign: (id: string) => catalog?.campaigns.find((item) => item.id === id) ?? myModsCampaign(id),
   activity: () => installActivity,
   isCurrent: (campaign: Campaign) => isCurrentCatalogCampaign(campaign, inspection),
   setBusy: (value: boolean) => { busy = value; },
@@ -67,6 +71,7 @@ function render() {
       <p class="eyebrow">CAMPAIGN CONTROL</p>
       <nav>
         <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns <strong>4</strong></button>
+        <button class="nav-item ${page === "mymods" ? "active" : ""}" data-page="mymods"><span>◆</span> My Mods</button>
         <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${catalog?.campaigns.length ?? 0}</strong></button>
         <button class="nav-item" data-action="show-settings"><span>⚙</span> Sources</button>
       </nav>
@@ -77,14 +82,14 @@ function render() {
     </aside>
     <main>
       <header>
-        <div><h1>${page === "dashboard" ? "Campaigns" : "Library"}</h1></div>
+        <div><h1>${PAGE_TITLES[page]}</h1></div>
         <div class="header-actions">
           <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
         </div>${renderGameBanner(gameDir, profileDir)}
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath, busy })}
       ${renderLegacyMigration(catalog, savedResumes, profileDir, busy)}
-      ${page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
+      ${page === "mymods" ? renderMyMods({ catalog, inspection, busy, gameDir, profileDir }) : page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
     </main>
     ${renderSettingsDialog({
       catalogSourceDraft: settingsCatalogSourceDraft,
@@ -115,7 +120,7 @@ function render() {
 function bindEvents() {
   document.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((button) => {
     button.addEventListener("click", () => {
-      page = button.dataset.page === "library" ? "library" : "dashboard";
+      page = (button.dataset.page ?? "dashboard") in PAGE_TITLES ? button.dataset.page as Page : "dashboard";
       // View, See all and the filter chips also choose what the Library shows.
       if (button.dataset.libraryFilter !== undefined) libraryFilter = button.dataset.libraryFilter;
       if (button.dataset.select) selectedId = button.dataset.select;
@@ -366,6 +371,7 @@ const localModsContext = {
 };
 
 async function inspectDirectory() {
+  await refreshInstalledMods(gameDir);
   if (!gameDir) {
     inspection = null;
     savedResumes = [];
