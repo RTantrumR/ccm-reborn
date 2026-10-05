@@ -50,6 +50,8 @@ fn snapshot_previous_install(
     let backup_root = manager_root(root).join(safe_backup_path(&state.backup_dir)?);
     let backup_snapshot = staging.join("previous-install-backup");
     if backup_root.is_dir() {
+        // An empty backup copies nothing; the journal still requires the folder.
+        fs::create_dir_all(&backup_snapshot).map_err(io_error)?;
         copy_regular_tree(&backup_root, &backup_snapshot)?;
     } else if state.files.iter().any(|file| file.original_existed) {
         return Err(format!("Previous backup directory {} is missing; refusing update.", backup_root.display()));
@@ -368,6 +370,21 @@ fn managed_install_files_match(root: &Path, state: &ManagedState) -> Result<bool
         }
     }
     Ok(package_files > 0)
+}
+
+/// Re-reads the journal right after a profile switch ran. If it can't be read, the
+/// switch is rolled back at once instead of being left half-done for recovery that
+/// would refuse the same journal.
+fn journal_profile_roots_or_rollback(root: &Path, transaction: &ProfileTransaction) -> Result<Vec<PathBuf>, String> {
+    match read_pending_install_journal(root) {
+        Ok(journal) => Ok(journal.map(|journal| journal.profile_roots).unwrap_or_default()),
+        Err(error) => {
+            if transaction.rollback().is_ok() {
+                let _ = fs::remove_file(pending_install_path(root));
+            }
+            Err(error)
+        }
+    }
 }
 
 fn recover_interrupted_install(root: &Path) -> Result<bool, String> {

@@ -402,6 +402,28 @@ mod ccm_store_tests {
     }
 
     #[test]
+    fn an_adopted_slots_empty_backup_still_yields_a_readable_journal() {
+        // Regression (owner's machine, 2026-10-05): restore after adopting in place
+        // failed with "Pending install journal is missing the previous-install backup".
+        let (root, _archive) = ccm_activated_game("title=Kerrigan Rogue\ncampaign=HotS\nversion=1.45.0\n");
+        assert!(adopt_ccm_slot_in_place(&root, "Maps/Campaign/swarm").unwrap());
+        let staging = manager_root(&root).join("staging/restore-test");
+        fs::create_dir_all(&staging).unwrap();
+        let previous_install = snapshot_previous_install(&root, &staging, "Maps/Campaign/swarm").unwrap();
+        write_pending_install_journal(&root, &PendingInstallJournal {
+            format: 1,
+            profile_transaction: ProfileTransaction { entries: Vec::new() },
+            profile_roots: Vec::new(),
+            previous_install,
+            new_state: None,
+            completed: false,
+        }).unwrap();
+        let read = read_pending_install_journal(&root);
+        fs::remove_dir_all(&root).ok();
+        assert!(read.is_ok(), "{read:?}");
+    }
+
+    #[test]
     fn original_does_nothing_to_an_unrecognised_unmanaged_slot() {
         let (root, _archive) = ccm_activated_game("title=Something Else\ncampaign=HotS\nversion=1\n");
         let restored = restore_original_campaigns_blocking(path_string(&root), None, "Maps/Campaign/swarm".into()).unwrap();

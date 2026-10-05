@@ -60,6 +60,34 @@ fn launch_starcraft_desktop(_reporter: &ProgressReporter) -> Result<(), String> 
     open_battle_net_desktop()
 }
 
+/// StarCraft II writes campaign banks and saves while it runs (and on exit), so
+/// switching a campaign under it can mix two campaigns' progress.
+#[cfg(all(target_os = "windows", not(test)))]
+fn starcraft_running() -> bool {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    ["SC2_x64.exe", "SC2.exe"].iter().any(|image| {
+        Command::new("tasklist")
+            .args(["/FI", &format!("IMAGENAME eq {image}"), "/NH"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map(|output| String::from_utf8_lossy(&output.stdout).contains(image))
+            .unwrap_or(false)
+    })
+}
+
+#[cfg(any(not(target_os = "windows"), test))]
+fn starcraft_running() -> bool {
+    false
+}
+
+fn refuse_while_starcraft_runs(root: &Path) -> Result<(), String> {
+    if looks_like_starcraft(root) && starcraft_running() {
+        return Err("StarCraft II is running. Close it completely, then switch again.".into());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn launch_starcraft(window: tauri::Window) -> Result<(), String> {
     let reporter = ProgressReporter::new(window);

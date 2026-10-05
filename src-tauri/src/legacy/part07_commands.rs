@@ -168,6 +168,7 @@ fn install_campaign_with_progress(
     if looks_like_starcraft(&root) && request.profile_dir.as_deref().map(str::trim).filter(|path| !path.is_empty()).is_none() {
         return Err("Choose the exact StarCraft II account profile with --profile-dir before applying a live install.".into());
     }
+    refuse_while_starcraft_runs(&root)?;
     let _operation_lock = acquire_operation_lock(&root)?;
     recover_interrupted_install(&root)?;
 
@@ -212,6 +213,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
     if looks_like_starcraft(&root) && profile_dir.as_deref().map(str::trim).filter(|path| !path.is_empty()).is_none() {
         return Err("Choose the exact StarCraft II account profile with --profile-dir before restoring a live campaign.".into());
     }
+    refuse_while_starcraft_runs(&root)?;
     let _operation_lock = acquire_operation_lock(&root)?;
     recover_interrupted_install(&root)?;
     let target = path_string(&safe_campaign_target(&target_path)?);
@@ -259,9 +261,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
                 )
             },
         )?;
-        let profile_roots = read_pending_install_journal(&root)?
-            .map(|journal| journal.profile_roots)
-            .unwrap_or_default();
+        let profile_roots = journal_profile_roots_or_rollback(&root, &profile_transaction)?;
         write_pending_install_journal(
             &root,
             &PendingInstallJournal {

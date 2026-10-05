@@ -76,9 +76,7 @@ fn install_archive(
                 )
             },
         )?;
-        let profile_roots = read_pending_install_journal(root)?
-            .map(|journal| journal.profile_roots)
-            .unwrap_or_default();
+        let profile_roots = journal_profile_roots_or_rollback(root, &profile_transaction)?;
         // A non-live/fixture install has no profile mutations, so its hook
         // never runs.  Persist the same intent before touching game files.
         write_pending_install_journal(
