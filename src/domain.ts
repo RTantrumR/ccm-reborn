@@ -8,6 +8,11 @@ export function campaignSlot(campaign: string) {
   return "nova-covert-ops";
 }
 
+/// The Library and the Campaigns previews list the community catalogue: mods that can be
+/// downloaded. Mods already on this PC (added from a zip, or left by the original CCM) live
+/// in My Mods only.
+export const isCommunityCampaign = (campaign: Campaign) => !campaign.isLocal && !campaign.isCcm;
+
 export const formatBytes = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 1024 ? 1 : 0)} MB`;

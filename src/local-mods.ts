@@ -7,8 +7,8 @@ export type LocalModsContext = {
   busy: () => boolean;
   setBusy: (value: boolean) => void;
   setMessage: (value: string, kind: "neutral" | "success" | "error") => void;
-  // Opens the mod in the Library, where it is always listed.
-  show: (campaignId: string) => void;
+  // Opens My Mods, where mods added from the player's computer are listed.
+  show: () => void;
   // Re-reads the local list, rebuilds the merged catalog and re-inspects the
   // game directory, so a freshly added mod is immediately installable.
   reload: () => Promise<void>;
@@ -109,7 +109,7 @@ async function confirmAddLocalMod(context: LocalModsContext) {
   try {
     const entry = await invoke<LocalModEntry>("add_local_mod", { path });
     await context.reload();
-    context.show(entry.id);
+    context.show();
     context.setMessage(
       `${entry.title} was added to ${entry.campaign}. Nothing in StarCraft II changed yet — choose Install when you want to play it.`,
       "success",

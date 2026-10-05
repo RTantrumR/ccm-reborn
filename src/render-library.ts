@@ -1,5 +1,5 @@
 import type { Campaign, Catalog, CurrentCampaign, Inspection } from "./types";
-import { campaignSlot, formatBytes } from "./domain";
+import { campaignSlot, formatBytes, isCommunityCampaign } from "./domain";
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!,
@@ -37,10 +37,7 @@ function renderInstallRow(campaign: Campaign, context: LibraryContext) {
   const button = context.isCurrentCatalogCampaign(campaign)
     ? `<button class="ghost" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : "Repair installation"}</button>`
     : `<button class="primary install" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : `Install v${escapeHtml(campaign.version)}`}</button>`;
-  const remove = campaign.isLocal
-    ? `<button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(campaign.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button>`
-    : "";
-  return `<div class="install-row">${button}${remove}</div>`;
+  return `<div class="install-row">${button}</div>`;
 }
 
 function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
@@ -69,7 +66,7 @@ function renderCard(campaign: Campaign, selected: Campaign | null, context: Libr
   const classes = ["campaign-card", `faction-${campaignSlot(campaign.requirements.campaign)}`, campaign.id === selected?.id ? "selected" : ""].join(" ").trim();
   return `<button class="${classes}" data-library-campaign="${escapeHtml(campaign.id)}">
     <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)}</p></div>
-    <span class="card-pills">${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${campaign.isCcm ? '<span class="local-pill">CCM</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</span>
+    ${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}
   </button>`;
 }
 
@@ -79,8 +76,8 @@ function renderFilters(active: string) {
 }
 
 export function renderLibrary(context: LibraryContext) {
-  const campaigns = (context.catalog?.campaigns ?? []).filter((campaign) =>
-    !context.filter || campaignSlot(campaign.requirements.campaign) === context.filter);
+  const campaigns = (context.catalog?.campaigns ?? []).filter((campaign) => isCommunityCampaign(campaign)
+    && (!context.filter || campaignSlot(campaign.requirements.campaign) === context.filter));
   // The selection follows the filter: a pick outside it falls back to the first visible one.
   const selected = campaigns.find((campaign) => campaign.id === context.selectedId) ?? campaigns[0] ?? null;
   const list = campaigns.length

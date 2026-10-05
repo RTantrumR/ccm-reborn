@@ -1,5 +1,5 @@
 import type { Campaign, Catalog, Inspection, SavedCampaignResume } from "./types";
-import { campaignSlot, formatBytes } from "./domain";
+import { campaignSlot, formatBytes, isCommunityCampaign } from "./domain";
 import { resumeCheckpoint, resumeFor, resumeInstruction, resumeSummary, sortCampaignsByRecentPlay } from "./resume";
 
 const slots = [
@@ -33,7 +33,7 @@ export function renderDashboard(context: DashboardContext) {
 function renderSlot(slot: typeof slots[number], context: DashboardContext) {
   const current = context.inspection?.activeCampaigns.find((campaign) => campaign.slot === slot.id);
   const options = sortCampaignsByRecentPlay(
-    context.catalog?.campaigns.filter((campaign) => campaignSlot(campaign.requirements.campaign) === slot.id) ?? [],
+    context.catalog?.campaigns.filter((campaign) => isCommunityCampaign(campaign) && campaignSlot(campaign.requirements.campaign) === slot.id) ?? [],
     context.savedResumes,
   );
   const currentPackage = context.catalog?.campaigns.find((campaign) =>
@@ -66,7 +66,7 @@ function renderPreview(campaign: Campaign, slotId: string, context: DashboardCon
   const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
   return `
     <article class="install-option">
-      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${campaign.isCcm ? '<span class="local-pill">CCM</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
+      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
       <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }

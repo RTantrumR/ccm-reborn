@@ -7,7 +7,7 @@ import type {
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
 import { renderLibrary } from "./render-library";
-import { isCurrentCatalogCampaign } from "./domain";
+import { isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
@@ -70,9 +70,9 @@ function render() {
       <div class="brand"><span class="brand-mark">C</span><span>CCM <b>REBORN</b></span></div>
       <p class="eyebrow">CAMPAIGN CONTROL</p>
       <nav>
-        <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns <strong>4</strong></button>
+        <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns</button>
         <button class="nav-item ${page === "mymods" ? "active" : ""}" data-page="mymods"><span>◆</span> My Mods</button>
-        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${catalog?.campaigns.length ?? 0}</strong></button>
+        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${catalog?.campaigns.filter(isCommunityCampaign).length ?? 0}</strong></button>
         <button class="nav-item" data-action="show-settings"><span>⚙</span> Sources</button>
       </nav>
       <div class="sidebar-footer">
@@ -362,7 +362,7 @@ const localModsContext = {
   busy: () => busy,
   setBusy: (value: boolean) => { busy = value; },
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
-  show: (campaignId: string) => { page = "library"; libraryFilter = ""; selectedId = campaignId; window.scrollTo(0, 0); },
+  show: () => { page = "mymods"; window.scrollTo(0, 0); },
   reload: async () => {
     catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
     await inspectDirectory();
