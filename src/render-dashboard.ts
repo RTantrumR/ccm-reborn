@@ -13,6 +13,9 @@ const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!,
 );
 
+// The Campaigns page previews what each campaign offers; the Library lists it all.
+const PREVIEW_COUNT = 5;
+
 type DashboardContext = {
   catalog: Catalog | null;
   inspection: Inspection | null;
@@ -20,8 +23,6 @@ type DashboardContext = {
   busy: boolean;
   gameDir: string;
   profileDir: string;
-  installingCampaignId: string;
-  highlightCampaignId: string;
   isCurrentCatalogCampaign: (campaign: Campaign) => boolean;
 };
 
@@ -55,19 +56,17 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
         <div class="current-slot-actions"><button class="primary compact open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button>${currentPackage || managed ? `<details class="campaign-options"><summary>More</summary><div>${currentPackage ? `<button class="ghost repair" data-action="install" data-campaign="${escapeHtml(currentPackage.id)}" ${!context.gameDir || context.busy ? "disabled" : ""}>Repair files</button>` : ""}${managed ? `<button class="ghost repair" data-action="restore" data-target="${escapeHtml(managed.targetPath)}" ${!context.gameDir || context.busy || !context.profileDir ? "disabled" : ""}>Restore original</button>` : ""}</div></details>` : ""}</div>
       </section>
       <section class="alternatives">
-        <div class="alternative-heading"><small>INSTALL SOMETHING ELSE</small><span>${options.length} available</span></div>
-        ${options.length ? options.map((campaign) => {
-          const isCurrent = context.isCurrentCatalogCampaign(campaign);
-          const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
-          return `
-          <article class="install-option${campaign.isLocal ? " local" : ""}${campaign.id === context.highlightCampaignId ? " highlighted" : ""}">
-            <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}${campaign.isLocal ? `<span class="option-remove"><button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(campaign.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button></span>` : ""}</div>
-            ${isCurrent
-              ? `<button class="primary compact open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button>`
-              : `<button class="primary compact" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${!context.gameDir ? 'disabled title="Choose your StarCraft II folder first"' : context.busy ? "disabled" : ""}>${context.busy && context.installingCampaignId === campaign.id ? "Working…" : "Install"}</button>`}
-          </article>
-        `;
-        }).join("") : '<p class="no-options">No packages for this campaign yet — check for updates or add a mod from your computer.</p>'}
+        <div class="alternative-heading"><small>MODS</small>${options.length > PREVIEW_COUNT ? `<button class="see-all" data-page="library" data-library-filter="${slot.id}">See all</button>` : ""}</div>
+        ${options.length ? options.slice(0, PREVIEW_COUNT).map((campaign) => renderPreview(campaign, slot.id, context)).join("") : '<p class="no-options">No mods for this campaign yet. Check for updates, or add one from your computer.</p>'}
       </section>
+    </article>`;
+}
+
+function renderPreview(campaign: Campaign, slotId: string, context: DashboardContext) {
+  const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
+  return `
+    <article class="install-option">
+      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
+      <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }

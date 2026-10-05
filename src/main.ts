@@ -31,11 +31,11 @@ let profileDir = localStorage.getItem("ccm-profile-directory") ?? "";
 let profileCandidates: StarcraftProfileCandidate[] = [];
 let catalog: Catalog | null = null;
 let cloudCatalog: Catalog | null = null;
-let highlightCampaignId = "";
 let inspection: Inspection | null = null;
 let savedResumes: SavedCampaignResume[] = [];
 let page: "dashboard" | "library" = "dashboard";
 let selectedId = "";
+let libraryFilter = "";
 let message = "Getting your campaigns ready…";
 let messageKind: "neutral" | "success" | "error" = "neutral";
 let busy = false;
@@ -69,7 +69,7 @@ function render() {
       <p class="eyebrow">CAMPAIGN CONTROL</p>
       <nav>
         <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns <strong>4</strong></button>
-        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library"><span>▦</span> Library <strong>${catalog?.campaigns.length ?? 0}</strong></button>
+        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${catalog?.campaigns.length ?? 0}</strong></button>
         <button class="nav-item" data-action="show-settings"><span>⚙</span> Sources</button>
       </nav>
       <div class="sidebar-footer">
@@ -86,7 +86,7 @@ function render() {
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath, busy })}
       ${renderLegacyMigration(catalog, savedResumes, profileDir, busy)}
-      ${page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, highlightCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, busy, gameDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
+      ${page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
     </main>
     ${renderSettingsDialog({
       catalogSourceDraft: settingsCatalogSourceDraft,
@@ -120,6 +120,10 @@ function bindEvents() {
   document.querySelectorAll<HTMLButtonElement>("[data-page]").forEach((button) => {
     button.addEventListener("click", () => {
       page = button.dataset.page === "library" ? "library" : "dashboard";
+      // View, See all and the filter chips also choose what the Library shows.
+      if (button.dataset.libraryFilter !== undefined) libraryFilter = button.dataset.libraryFilter;
+      if (button.dataset.select) selectedId = button.dataset.select;
+      window.scrollTo(0, 0);
       render();
     });
   });
@@ -371,7 +375,7 @@ const localModsContext = {
   busy: () => busy,
   setBusy: (value: boolean) => { busy = value; },
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
-  setHighlight: (campaignId: string) => { highlightCampaignId = campaignId; },
+  show: (campaignId: string) => { page = "library"; libraryFilter = ""; selectedId = campaignId; window.scrollTo(0, 0); },
   reload: async () => {
     catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
     await inspectDirectory();

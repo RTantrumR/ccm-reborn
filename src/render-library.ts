@@ -9,10 +9,19 @@ const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
 // Campaign cell. Hidden until the catalog carries tags worth showing.
 const SHOW_TAGS = false;
 
+const FILTERS = [
+  { id: "", label: "All" },
+  { id: "wings-of-liberty", label: "Wings of Liberty" },
+  { id: "heart-of-the-swarm", label: "Heart of the Swarm" },
+  { id: "legacy-of-the-void", label: "Legacy of the Void" },
+  { id: "nova-covert-ops", label: "Nova Covert Ops" },
+];
+
 export type LibraryContext = {
   catalog: Catalog | null;
   inspection: Inspection | null;
   selectedId: string;
+  filter: string; // campaignSlot() id, or "" for every campaign
   busy: boolean;
   gameDir: string;
   installingCampaignId: string;
@@ -25,7 +34,10 @@ function renderInstallRow(campaign: Campaign, context: LibraryContext) {
   const button = context.isCurrentCatalogCampaign(campaign)
     ? `<button class="ghost" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : "Repair installation"}</button>`
     : `<button class="primary install" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : `Install v${escapeHtml(campaign.version)}`}</button>`;
-  return `<div class="install-row">${button}</div>`;
+  const remove = campaign.isLocal
+    ? `<button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(campaign.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button>`
+    : "";
+  return `<div class="install-row">${button}${remove}</div>`;
 }
 
 function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
@@ -58,8 +70,15 @@ function renderCard(campaign: Campaign, selected: Campaign | null, context: Libr
   </button>`;
 }
 
+function renderFilters(active: string) {
+  return `<div class="library-filters" role="toolbar" aria-label="Campaign">${FILTERS.map((filter) =>
+    `<button class="filter-chip${filter.id ? ` faction-${filter.id}` : ""}${filter.id === active ? " active" : ""}" data-page="library" data-library-filter="${filter.id}" aria-pressed="${filter.id === active}">${filter.label}</button>`).join("")}</div>`;
+}
+
 export function renderLibrary(context: LibraryContext) {
-  const campaigns = context.catalog?.campaigns ?? [];
+  const campaigns = (context.catalog?.campaigns ?? []).filter((campaign) =>
+    !context.filter || campaignSlot(campaign.requirements.campaign) === context.filter);
+  // The selection follows the filter: a pick outside it falls back to the first visible one.
   const selected = campaigns.find((campaign) => campaign.id === context.selectedId) ?? campaigns[0] ?? null;
   const list = campaigns.length
     ? campaigns.map((campaign) => renderCard(campaign, selected, context)).join("")
@@ -67,5 +86,5 @@ export function renderLibrary(context: LibraryContext) {
   const detail = selected
     ? `<article class="campaign-detail faction-${campaignSlot(selected.requirements.campaign)}">${renderLibraryDetail(selected, context)}</article>`
     : '<article class="campaign-detail"><div class="empty-detail"><div class="empty-orb">◇</div><h2>Library is empty.</h2></div></article>';
-  return `<section class="workspace library-workspace"><div class="campaign-list">${list}</div>${detail}</section>`;
+  return `${renderFilters(context.filter)}<section class="workspace library-workspace"><div class="campaign-list">${list}</div>${detail}</section>`;
 }
