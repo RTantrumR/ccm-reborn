@@ -12,3 +12,5 @@ dev-catalog/packages/*
 reviews
 docs/
 CLAUDE.md
+
+bot/data/
