@@ -163,7 +163,8 @@ fn profile_sort_key(path: &Path) -> (u8, u64) {
 }
 
 fn standard_profile_locations() -> Vec<PathBuf> {
-    let mut locations = Vec::new();
+    // The real Documents folder first: it may be OneDrive-redirected or localised.
+    let mut locations: Vec<PathBuf> = known_documents_folder().map(|documents| documents.join("StarCraft II").join("Accounts")).into_iter().collect();
     if let Some(home) = std::env::var_os("HOME") {
         let home = PathBuf::from(home);
         locations.push(home.join("Library/Application Support/Blizzard/StarCraft II/Accounts"));

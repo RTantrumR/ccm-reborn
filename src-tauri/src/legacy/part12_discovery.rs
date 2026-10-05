@@ -157,10 +157,12 @@ fn metadata_field(metadata: &str, name: &str) -> Option<String> {
 }
 
 fn standard_game_locations() -> Vec<PathBuf> {
-    let mut locations = vec![
+    // Where Blizzard's installer says the game is wins over every guessed folder.
+    let mut locations: Vec<PathBuf> = registry_install_location("StarCraft II").into_iter().collect();
+    locations.extend([
         PathBuf::from("/Applications/StarCraft II"),
         PathBuf::from("/Applications/StarCraft II.app"),
-    ];
+    ]);
     if let Some(home) = std::env::var_os("HOME") {
         let home = PathBuf::from(home);
         locations.extend([
@@ -286,10 +288,14 @@ fn is_game_root(path: &Path) -> bool {
 }
 
 fn game_directory_candidate(path: PathBuf) -> GameDirectoryCandidate {
-    GameDirectoryCandidate {
-        label: path.display().to_string(),
-        path: path.display().to_string(),
-    }
+    // canonicalize() returns Windows' verbatim form (\\?\E:\...); show and store the
+    // ordinary drive path instead. UNC shares keep their verbatim form.
+    let text = path.display().to_string();
+    let text = match text.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with("UNC") => rest.to_string(),
+        _ => text,
+    };
+    GameDirectoryCandidate { label: text.clone(), path: text }
 }
 
 #[cfg(target_os = "macos")]

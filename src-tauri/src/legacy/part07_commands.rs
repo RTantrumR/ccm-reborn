@@ -27,7 +27,7 @@ fn detect_starcraft_profiles() -> Result<Vec<StarcraftProfileCandidate>, String>
         profiles
             .into_iter()
             .map(|path| StarcraftProfileCandidate {
-                label: display_profile_path(&path),
+                label: profile_label(&path),
                 path: path.display().to_string(),
             })
             .collect()
