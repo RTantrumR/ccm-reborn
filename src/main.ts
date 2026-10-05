@@ -12,7 +12,7 @@ import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
 import { renderGameBanner } from "./game-banner";
-import { myModsCampaign, refreshInstalledMods, renderMyMods } from "./my-mods";
+import { myModsCampaign, refreshInstalledMods, renderMyMods, withCcmStore } from "./my-mods";
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
 import { bindInstallConfirm, renderInstallConfirm, requestInstall } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
@@ -372,6 +372,7 @@ const localModsContext = {
 
 async function inspectDirectory() {
   await refreshInstalledMods(gameDir);
+  catalog = withCcmStore(catalog);
   if (!gameDir) {
     inspection = null;
     savedResumes = [];

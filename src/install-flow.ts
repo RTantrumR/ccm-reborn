@@ -104,7 +104,10 @@ async function installCampaign(flow: InstallFlow, campaignId: string) {
   flow.setBusy(true); flow.setCampaignId(campaign.id);
   flow.setActivity(pendingActivity("preparing-install", preparing)); flow.setFailure(null); flow.setMessage(preparing, "neutral"); flow.render();
   try {
-    const result = await invoke<InstallResult>("install_campaign", { request: requestFor(campaign, gameDir, profileDir) });
+    const result = campaign.isCcm
+      // Installed in place from the original CCM's folder.
+      ? await invoke<InstallResult>("install_ccm_store_mod", { gameDir, profileDir, id: campaign.id })
+      : await invoke<InstallResult>("install_campaign", { request: requestFor(campaign, gameDir, profileDir) });
     flow.setMessage(`Installed ${result.title} v${result.version}. Open Battle.net and press Play.`, "success");
     flow.setActivity(null); flow.setCampaignId("");
     await flow.inspectDirectory();

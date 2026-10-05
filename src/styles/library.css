@@ -28,6 +28,8 @@
 .campaign-copy { min-width: 0; }
 .campaign-copy h2 { margin: 0 0 var(--space-1); font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .campaign-copy p { margin: 0; color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
+.card-pills { display: flex; gap: 4px; align-self: start; }
+.card-pills:empty { display: none; }
 .installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-label) var(--font-body); letter-spacing: .06em; }
 
 /* Sticky under the sticky header, so a pick far down the list visibly lands.

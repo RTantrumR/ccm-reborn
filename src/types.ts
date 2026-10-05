@@ -11,6 +11,8 @@ export type Campaign = {
   // leave both undefined so nothing about the existing catalogue changes.
   isLocal?: boolean;
   addedAt?: number;
+  // A mod in the original CCM's folder (Maps/CustomCampaigns), installed from there in place.
+  isCcm?: boolean;
 };
 
 export type LocalModEntry = {

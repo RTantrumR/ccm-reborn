@@ -66,7 +66,7 @@ function renderPreview(campaign: Campaign, slotId: string, context: DashboardCon
   const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
   return `
     <article class="install-option">
-      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
+      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${campaign.isCcm ? '<span class="local-pill">CCM</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
       <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }

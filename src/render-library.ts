@@ -69,7 +69,7 @@ function renderCard(campaign: Campaign, selected: Campaign | null, context: Libr
   const classes = ["campaign-card", `faction-${campaignSlot(campaign.requirements.campaign)}`, campaign.id === selected?.id ? "selected" : ""].join(" ").trim();
   return `<button class="${classes}" data-library-campaign="${escapeHtml(campaign.id)}">
     <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)}</p></div>
-    ${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}
+    <span class="card-pills">${campaign.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${campaign.isCcm ? '<span class="local-pill">CCM</span>' : ""}${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</span>
   </button>`;
 }
 
