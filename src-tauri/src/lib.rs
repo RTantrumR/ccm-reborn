@@ -22,6 +22,7 @@ include!("legacy/part19_ccm_store.rs");
 include!("legacy/part20_detection.rs");
 include!("legacy/part21_launch.rs");
 include!("legacy/part22_mission_save.rs");
+include!("legacy/part23_hosted_links.rs");
 
 #[cfg(test)]
 mod tests_a {

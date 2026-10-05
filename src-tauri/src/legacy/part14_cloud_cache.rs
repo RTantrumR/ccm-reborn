@@ -187,12 +187,15 @@ fn download_remote_archive_once(
     temporary: &Path,
     reporter: Option<&ProgressReporter>,
 ) -> Result<(), CloudDownloadFailure> {
+    use ctr::cipher::StreamCipher;
+    // A MEGA link resolves to a fresh address each attempt, and its bytes are decrypted as they arrive.
+    let HostedDownload { url, mut cipher } = resolve_hosted_download(url)?;
     let response = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|error| CloudDownloadFailure::Permanent(format!("Could not create cloud download client: {error}")))?
-        .get(url)
+        .get(&url)
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
         .send()
         .map_err(|error| CloudDownloadFailure::Retryable(format!("Could not connect to the cloud download: {error}")))?
@@ -218,6 +221,7 @@ fn download_remote_archive_once(
             if read == 0 { break; }
             copied = copied.saturating_add(read as u64);
             if copied > MAX_ARCHIVE_BYTES { return Err(CloudDownloadFailure::Permanent("Package is larger than the allowed download size.".into())); }
+            if let Some(cipher) = cipher.as_mut() { cipher.apply_keystream(&mut buffer[..read]); }
             digest.update(&buffer[..read]);
             output.write_all(&buffer[..read]).map_err(|error| CloudDownloadFailure::Permanent(io_error(error)))?;
             reporter.map(|reporter| reporter.download(copied, expected_size));

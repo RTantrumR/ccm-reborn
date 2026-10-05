@@ -79,6 +79,9 @@ pub struct LocalModOverrides {
     version: Option<String>,
     #[serde(default)]
     description: Option<String>,
+    // A Library mod kept for later keeps its Library id, so it shows as that mod once switched to.
+    #[serde(default)]
+    id: Option<String>,
 }
 
 fn local_mod_root() -> Result<PathBuf, String> {
@@ -302,7 +305,8 @@ fn add_local_mod_at(
     if mods.len() >= MAX_LOCAL_MODS {
         return Err("CCM already tracks the maximum number of local mods.".into());
     }
-    let id = unique_local_mod_id(&inspection.suggested_id, &mods)?;
+    let suggested = overrides.id.as_deref().map(str::trim).filter(|id| !id.is_empty()).unwrap_or(&inspection.suggested_id);
+    let id = unique_local_mod_id(suggested, &mods)?;
     let archives = prepare_local_mod_directories(root)?;
     let archive_file = format!("{id}.zip");
     let destination = archives.join(&archive_file);
@@ -421,7 +425,7 @@ pub fn cli_local_add_json(
     version: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let root = local_mod_store_root(store_dir)?;
-    let overrides = LocalModOverrides { title, author, version, description: None };
+    let overrides = LocalModOverrides { title, author, version, description: None, id: None };
     let entry = add_local_mod_at(&root, Path::new(archive.trim()), &overrides)?;
     serde_json::to_value(entry).map_err(|error| error.to_string())
 }

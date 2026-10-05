@@ -38,7 +38,7 @@ it, and play. The app remembers what you installed and where you left off.
 
 ## Your campaigns and saves are safe
 
-Close StarCraft II before you install, repair, or restore a campaign. Before
+Close StarCraft II before you install, update, or restore a campaign. Before
 anything changes, CCM Reborn checks that the download arrived complete and
 unchanged and keeps a backup of the campaign it replaces. If something goes
 wrong halfway, it undoes the change. **Restore original** brings back the

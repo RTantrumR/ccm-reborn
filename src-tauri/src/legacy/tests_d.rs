@@ -191,3 +191,30 @@ fn local_catalog_leaves_out_mods_with_missing_packages() {
     assert_eq!(loaded.missing_packages, ["Gone Mod"]);
     let _ = fs::remove_dir_all(root);
 }
+
+// The key and counter match the archive bot's (bot/src/hosts.ts), whose download of this
+// file matched the real package's SHA-256.
+#[test]
+fn mega_links_yield_the_file_key() {
+    let (id, key, counter) = mega_file("https://mega.nz/file/IWhFgYiD#1VrZAmjsQSekYB7WQ0-zFVFATvEVK4oG_1i-HY89y-g").unwrap();
+    assert_eq!(id, "IWhFgYiD");
+    assert_eq!(hex::encode(key), "841a97f37dc7cb215b38a0cbcc7278fd");
+    assert_eq!(hex::encode(counter), "51404ef1152b8a060000000000000000");
+    let legacy = mega_file("https://mega.nz/#!IWhFgYiD!1VrZAmjsQSekYB7WQ0-zFVFATvEVK4oG_1i-HY89y-g").unwrap();
+    assert_eq!(legacy.1, key);
+    assert!(mega_file("https://mega.nz/folder/IWhFgYiD#abc").is_none());
+    assert!(mega_file("https://example.com/file/IWhFgYiD#1VrZAmjsQSekYB7WQ0-zFVFATvEVK4oG_1i-HY89y-g").is_none());
+    assert!(mega_file("https://mega.nz/file/IWhFgYiD#short").is_none());
+}
+
+#[test]
+fn drive_links_and_confirm_page() {
+    assert_eq!(drive_file_id("https://drive.google.com/file/d/1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t/view?usp=sharing").as_deref(), Some("1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t"));
+    assert_eq!(drive_file_id("https://drive.google.com/open?id=abc_D-1").as_deref(), Some("abc_D-1"));
+    assert_eq!(drive_file_id("https://drive.google.com/drive/folders/xyz"), None);
+    assert_eq!(drive_file_id("https://docs.google.com/document/d/zz/edit"), None);
+    // Shape of Drive's virus-scan page (2026-10-05).
+    let page = r#"<form id="download-form" action="https://drive.usercontent.google.com/download" method="get"><input type="hidden" name="id" value="1JAj"><input type="hidden" name="export" value="download"><input type="hidden" name="confirm" value="t"><input type="hidden" name="uuid" value="7248a322"></form>"#;
+    assert_eq!(drive_confirm_fields(page), [("id", "1JAj"), ("export", "download"), ("confirm", "t"), ("uuid", "7248a322")]
+        .map(|(name, value)| (name.to_string(), value.to_string())));
+}

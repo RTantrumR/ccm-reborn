@@ -1,4 +1,5 @@
 import type { StarcraftProfileCandidate } from "./types";
+import { installSetting } from "./install-flow";
 import { profileName } from "./resume";
 
 type SettingsDialogContext = {
@@ -59,6 +60,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
           <button type="button" class="ghost" data-action="choose-profile">Choose profile…</button>
           <button type="button" class="ghost" data-action="detect-profiles">Find profiles</button>
         </div>
+        ${installSetting()}
         <div class="dialog-actions">
           <button class="ghost" value="cancel">Cancel</button>
           <button class="primary" value="default" data-action="save-settings">Reload catalog</button>

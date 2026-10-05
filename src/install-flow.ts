@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { formatBytes } from "./domain";
+import type { InstallAction } from "./domain";
 import type { Campaign, InstallProgress, InstallResult } from "./types";
 import type { InstallFailure } from "./install-status";
 
@@ -12,6 +13,8 @@ type InstallFlow = {
   activity: () => InstallProgress | null;
   message: () => string;
   isCurrent: (campaign: Campaign) => boolean;
+  // Install, update (another version is in the slot) or reinstall (the same version).
+  actionFor: (campaign: Campaign) => InstallAction;
   setBusy: (value: boolean) => void;
   setActivity: (value: InstallProgress | null) => void;
   setCampaignId: (value: string) => void;
@@ -23,6 +26,8 @@ type InstallFlow = {
   play: () => Promise<void>;
   // An install that runs without the dialog shows its progress on the page.
   onStart: () => void;
+  // Re-reads the mods kept on this PC, after one is downloaded for later.
+  reloadLocalMods: () => Promise<void>;
   render: () => void;
 };
 
@@ -32,10 +37,11 @@ type CloseOutcome = { closed: boolean; savedAs: string | null };
 // A switch while StarCraft II runs goes through one dialog: ask to close it, save the
 // mission and close the game, install, then offer to open it again. "unsaved" is a
 // mission the game wouldn't save: the player decides whether to close anyway.
-type Stage = "ask" | "closing" | "unsaved" | "working" | "done" | "failed";
-// `repair` is decided up front: once installed, the mod is always the current one.
+// "choose" comes first for a new mod: play it now, or only download it ("kept") for My Mods.
+type Stage = "choose" | "kept" | "ask" | "closing" | "unsaved" | "working" | "done" | "failed";
+// `action` is decided up front: once installed, the mod is always the current one.
 let modal: {
-  pending: Pending; stage: Stage; inMission: boolean | null; repair: boolean; error: string; savedAs: string | null;
+  pending: Pending; stage: Stage; inMission: boolean | null; action: InstallAction; error: string; savedAs: string | null;
 } | null = null;
 
 // The player's local time for the save's name; Windows file names can't hold ":".
@@ -72,12 +78,67 @@ function recordFailure(flow: InstallFlow, phase: string, error: unknown) {
   flow.setCampaignId("");
 }
 
-export const requestInstall = (flow: InstallFlow, campaignId: string) => void begin(flow, { kind: "install", id: campaignId });
+// "Install all new mods as current campaigns": no "choose" step. Also a switch in Settings.
+const ALWAYS_CURRENT = "ccm-install-as-current";
+export function installsAsCurrent() {
+  try {
+    return localStorage.getItem(ALWAYS_CURRENT) === "1";
+  } catch {
+    return false;
+  }
+}
+function setInstallsAsCurrent(value: boolean) {
+  try {
+    if (value) localStorage.setItem(ALWAYS_CURRENT, "1");
+    else localStorage.removeItem(ALWAYS_CURRENT);
+  } catch {
+    // Without storage the question is simply asked again next time.
+  }
+}
+export const installSetting = () =>
+  `<label class="dialog-check"><input type="checkbox" id="always-current" ${installsAsCurrent() ? "checked" : ""}> Install all new mods as current campaigns</label>`;
+
+// The "choose" step's two boxes, kept across renders.
+let choice = { asCurrent: true, always: false };
+
+/// `choose`: from an Install button. A mod that isn't on this PC yet first asks whether to
+/// play it now or only download it; switching in My Mods never asks.
+export function requestInstall(flow: InstallFlow, campaignId: string, choose = false) {
+  const campaign = flow.campaign(campaignId);
+  if (choose && campaign && !campaign.isLocal && !campaign.isCcm && !flow.isCurrent(campaign) && !installsAsCurrent()) {
+    choice = { asCurrent: true, always: false };
+    modal = { pending: { kind: "install", id: campaignId }, stage: "choose", inMission: null, action: "install", error: "", savedAs: null };
+    flow.render();
+    return;
+  }
+  void begin(flow, { kind: "install", id: campaignId });
+}
+
+/// Downloads and checks the mod, then keeps it in My Mods; nothing in the game changes.
+async function keepForLater(flow: InstallFlow, campaign: Campaign) {
+  if (!modal) return;
+  modal.stage = "working";
+  flow.setBusy(true); flow.setFailure(null);
+  flow.setActivity(pendingActivity("downloading", `Downloading ${campaign.title}…`));
+  flow.render();
+  try {
+    const path = await invoke<string>("download_package", { source: campaign.package.source, sha256: campaign.package.sha256, size: campaign.package.size });
+    await invoke("add_local_mod", { path, overrides: {
+      id: campaign.id, title: campaign.title, author: campaign.author, version: campaign.version, description: campaign.description,
+    } });
+    await flow.reloadLocalMods();
+    if (modal) modal.stage = "kept";
+  } catch (error) {
+    if (modal) modal = { ...modal, stage: "failed", error: String(error) };
+  } finally {
+    flow.setActivity(null); flow.setBusy(false); flow.render();
+  }
+}
 export const requestRestore = (flow: InstallFlow, targetPath: string) => void begin(flow, { kind: "restore", targetPath });
 
-const repairing = (flow: InstallFlow, pending: Pending) => {
+const actionOf = (flow: InstallFlow, pending: Pending): InstallAction => {
   const campaign = pending.kind === "install" ? flow.campaign(pending.id) : undefined;
-  return campaign ? flow.isCurrent(campaign) : false;
+  return campaign ? flow.actionFor(campaign) : "install";
 };
 
 /// One click installs. Only a running StarCraft II stops it, and then the dialog asks
@@ -90,7 +151,7 @@ async function begin(flow: InstallFlow, pending: Pending) {
     // The backend still refuses a switch under a running game.
   }
   if (status.running) {
-    modal = { pending, stage: "ask", inMission: status.inMission, repair: repairing(flow, pending), error: "", savedAs: null };
+    modal = { pending, stage: "ask", inMission: status.inMission, action: actionOf(flow, pending), error: "", savedAs: null };
     flow.render();
     return;
   }
@@ -147,12 +208,22 @@ function progressBar(activity: InstallProgress | null) {
 
 function body(flow: InstallFlow, current: NonNullable<typeof modal>) {
   const installing = current.pending.kind === "install";
-  const repair = current.repair;
+  const action = current.action;
   switch (current.stage) {
+    case "choose":
+      return `<label class="dialog-check"><input type="checkbox" id="as-current" ${choice.asCurrent ? "checked" : ""} ${choice.always ? "disabled" : ""}> Install the mod as the current campaign</label>
+        <label class="dialog-check"><input type="checkbox" id="always-current-once" ${choice.always ? "checked" : ""}> Install all new mods as current campaigns</label>
+        <div class="dialog-actions">
+          <button class="ghost" value="cancel" data-action="cancel-install">Cancel</button>
+          <button class="primary" data-action="confirm-install" autofocus>Install</button>
+        </div>`;
+    case "kept":
+      return `<p class="dialog-note">Downloaded. It's in My Mods, ready to switch to.</p>
+        <div class="dialog-actions"><button class="ghost" value="cancel" data-action="cancel-install" autofocus>Close</button></div>`;
     case "ask": {
       const save = current.inMission === false ? ""
         : `<p class="dialog-note">${current.inMission ? "You're in a mission. CCM Reborn" : "If you're in a mission, CCM Reborn"} <strong>saves it before closing</strong>.</p>`;
-      return `<p class="dialog-note">To ${repair ? "repair this mod" : installing ? "install this mod" : "switch back to Blizzard's campaign"}, StarCraft II needs to be closed.</p>${save}
+      return `<p class="dialog-note">To ${!installing ? "switch back to Blizzard's campaign" : `${action} this mod`}, StarCraft II needs to be closed.</p>${save}
         <div class="dialog-actions">
           <button class="stop" value="cancel" data-action="cancel-install">Cancel</button>
           <button class="go" data-action="close-starcraft" autofocus>Close now</button>
@@ -171,7 +242,7 @@ function body(flow: InstallFlow, current: NonNullable<typeof modal>) {
       return `<p class="dialog-note">${escapeHtml(activity?.message || (installing ? "Installing…" : "Switching…"))}</p>${progressBar(activity)}`;
     }
     case "done":
-      return `<p class="dialog-note">${repair ? "Repaired." : installing ? "Installed." : "Switched."}${current.savedAs ? ` Your mission is saved as <strong>${escapeHtml(current.savedAs)}</strong>.` : ""} Open StarCraft II again?</p>
+      return `<p class="dialog-note">${!installing ? "Switched." : action === "update" ? "Updated." : action === "reinstall" ? "Reinstalled." : "Installed."}${current.savedAs ? ` Your mission is saved as <strong>${escapeHtml(current.savedAs)}</strong>.` : ""} Open StarCraft II again?</p>
         <div class="dialog-actions">
           <button class="ghost" value="cancel" data-action="cancel-install">No, thanks</button>
           <button class="go" data-action="reopen-starcraft" autofocus>Open StarCraft II</button>
@@ -187,15 +258,42 @@ export function renderInstallConfirm(flow: InstallFlow) {
   return `
     <dialog id="install-confirm-dialog">
       <form method="dialog" class="dialog-card">
-        <div><p class="eyebrow">${modal.pending.kind === "restore" ? "SWITCH" : modal.repair ? "REPAIR" : "INSTALL"}</p><h2>${heading(flow, modal.pending)}</h2></div>
+        <div><p class="eyebrow">${modal.pending.kind === "restore" ? "SWITCH" : modal.action.toUpperCase()}</p><h2>${heading(flow, modal.pending)}</h2></div>
         ${body(flow, modal)}
       </form>
     </dialog>`;
 }
 
 export function bindInstallConfirm(flow: InstallFlow) {
+  // The same choice in Settings, saved as soon as it's clicked.
+  document.querySelector<HTMLInputElement>("#always-current")?.addEventListener("change", (event) =>
+    setInstallsAsCurrent((event.target as HTMLInputElement).checked));
   const dialog = document.querySelector<HTMLDialogElement>("#install-confirm-dialog");
   if (!dialog || !modal) return;
+  dialog.querySelector<HTMLInputElement>("#as-current")?.addEventListener("change", (event) => {
+    choice.asCurrent = (event.target as HTMLInputElement).checked;
+  });
+  // "All new mods as current" implies this one too.
+  dialog.querySelector<HTMLInputElement>("#always-current-once")?.addEventListener("change", (event) => {
+    choice.always = (event.target as HTMLInputElement).checked;
+    if (choice.always) choice.asCurrent = true;
+    const asCurrent = dialog.querySelector<HTMLInputElement>("#as-current");
+    if (asCurrent) { asCurrent.checked = choice.asCurrent; asCurrent.disabled = choice.always; }
+  });
+  dialog.querySelector("[data-action='confirm-install']")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!modal || modal.pending.kind !== "install") return;
+    const pending = modal.pending;
+    if (choice.always) setInstallsAsCurrent(true);
+    if (choice.asCurrent) {
+      modal = null;
+      dialog.close("keep");
+      void begin(flow, pending);
+      return;
+    }
+    const campaign = flow.campaign(pending.id);
+    if (campaign) void keepForLater(flow, campaign);
+  });
   // Esc can't interrupt closing the game or an install.
   dialog.addEventListener("cancel", (event) => {
     if (modal?.stage === "closing" || modal?.stage === "working") event.preventDefault();

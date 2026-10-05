@@ -476,6 +476,7 @@ pub fn run() {
             starcraft_status,
             starcraft_is_running,
             open_web_link,
+            download_package,
             close_starcraft,
             resolve_starcraft_profile
         ])

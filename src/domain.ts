@@ -19,6 +19,16 @@ export const formatBytes = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 1024 ? 1 : 0)} MB`;
 
+export type InstallAction = "install" | "update" | "reinstall";
+
+/// What an Install button does for this mod: the mod in its slot in another version is an
+/// update; the same version is a reinstall (put its files back as they were).
+export function installAction(campaign: Campaign, inspection: Inspection | null): InstallAction {
+  if (!isCurrentCatalogCampaign(campaign, inspection)) return "install";
+  const installed = inspection?.activeCampaigns.find((item) => item.slot === campaignSlot(campaign.requirements.campaign))?.version.trim() ?? "";
+  return installed && installed !== campaign.version.trim() ? "update" : "reinstall";
+}
+
 export function isCurrentCatalogCampaign(campaign: Campaign, inspection: Inspection | null) {
   if (inspection?.managedCampaigns.some((item) => item.id === campaign.id)) return true;
   const current = inspection?.activeCampaigns.find((item) => item.slot === campaignSlot(campaign.requirements.campaign));

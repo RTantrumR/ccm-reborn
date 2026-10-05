@@ -124,7 +124,7 @@ async function confirmAddLocalMod(context: LocalModsContext) {
 
 async function removeLocalMod(context: LocalModsContext, campaign: Campaign, installed: boolean) {
   const warning = installed
-    ? " It is installed in StarCraft II right now: that campaign stays exactly as it is, but Repair will not work until you add the archive again."
+    ? " It is installed in StarCraft II right now: that campaign stays exactly as it is, but Reinstall will not work until you add the archive again."
     : "";
   if (!window.confirm(`Remove ${campaign.title} from your list? CCM Reborn deletes its own copy of the archive and nothing else.${warning}`)) {
     return;

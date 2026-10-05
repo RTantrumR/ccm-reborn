@@ -6,8 +6,8 @@ import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
-import { renderLibrary } from "./render-library";
-import { isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
+import { fitLibraryDetail, renderLibrary } from "./render-library";
+import { installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
@@ -55,10 +55,11 @@ let settingsProfileDirDraft = profileDir;
 
 const installFlow = {
   gameDir: () => gameDir, profileDir: () => profileDir,
-  campaign: (id: string) => catalog?.campaigns.find((item) => item.id === id) ?? myModsCampaign(id),
+  campaign: (id: string) => catalog?.campaigns.find((item) => item.id === id) ?? archiveCampaigns().find((item) => item.id === id) ?? myModsCampaign(id),
   activity: () => installActivity,
   message: () => message,
   isCurrent: (campaign: Campaign) => isCurrentCatalogCampaign(campaign, inspection),
+  actionFor: (campaign: Campaign) => installAction(campaign, inspection),
   setBusy: (value: boolean) => { busy = value; },
   setActivity: (value: InstallProgress | null) => { installActivity = value; },
   setCampaignId: (value: string) => { activeInstallCampaignId = value; },
@@ -66,6 +67,7 @@ const installFlow = {
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
   inspectDirectory, render, restore: (targetPath: string) => restoreOriginals(targetPath),
   play: () => playStarcraft(),
+  reloadLocalMods: () => localModsContext.reload(),
   onStart: () => { scrollToInstallStatus = true; },
 };
 
@@ -173,10 +175,11 @@ function bindEvents() {
   document.querySelectorAll<HTMLButtonElement>("[data-action='choose-profile']").forEach((button) => button.addEventListener("click", () => void chooseProfileDirectory()));
   document.querySelector<HTMLButtonElement>("[data-action='detect-profiles']")?.addEventListener("click", () => void refreshProfiles(true));
   document.querySelectorAll<HTMLButtonElement>("[data-action='install']").forEach((button) => {
-    button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? ""));
+    button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? "", true));
   });
   bindInstallConfirm(installFlow);
   bindArchive((text) => { message = text; messageKind = "error"; render(); });
+  fitLibraryDetail();
   bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {

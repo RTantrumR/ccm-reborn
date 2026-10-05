@@ -9,6 +9,8 @@ export const ARCHIVE_FEED = "http://127.0.0.1:8791";
 type ArchiveMod = {
   id: string; title: string; author: string; campaign: string; version: string | null;
   description: string; downloadUrl: string; docsUrl: string | null; images: string[];
+  // Set when the bot downloaded the package and checked the app can install it.
+  package: { sha256: string; size: number; fileName: string } | null;
 };
 
 const CAMPAIGN_NAMES: Record<string, string> = {
@@ -21,14 +23,16 @@ let archive: Campaign[] = [];
 export const archiveCampaigns = () => archive;
 
 const toCampaign = (mod: ArchiveMod): Campaign => ({
-  id: `archive:${mod.id}`,
+  // The app's campaign ids allow only letters, digits, "-" and "_".
+  id: `archive-${mod.id}`,
   title: mod.title,
   author: mod.author,
   version: mod.version ?? "",
   description: mod.description,
   tags: [],
   requirements: { campaign: CAMPAIGN_NAMES[mod.campaign] ?? mod.campaign },
-  package: { source: "", sha256: "", size: 0 },
+  // A verified package installs from its link like a catalog download (MEGA links are decrypted on the way).
+  package: mod.package ? { source: mod.downloadUrl, sha256: mod.package.sha256, size: mod.package.size } : { source: "", sha256: "", size: 0 },
   link: { download: mod.downloadUrl, docs: mod.docsUrl },
   images: mod.images.slice(0, 5).map((path) => `${ARCHIVE_FEED}${path}`),
 });
