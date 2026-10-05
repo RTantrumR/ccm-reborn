@@ -34,15 +34,15 @@ export type LibraryContext = {
 };
 
 const HOSTS: [RegExp, string][] = [
-  [/(^|.)mega.(nz|io|co.nz)$/i, "MEGA"], [/^drive.google.com$|^docs.google.com$/i, "Google Drive"],
-  [/(^|.)dropbox.com$/i, "Dropbox"], [/(^|.)mediafire.com$/i, "MediaFire"], [/(^|.)moddb.com$/i, "ModDB"],
-  [/^1drv.ms$|^onedrive.live.com$/i, "OneDrive"],
+  [/(^|\.)mega\.(nz|io|co\.nz)$/i, "MEGA"], [/^drive\.google\.com$|^docs\.google\.com$/i, "Google Drive"],
+  [/(^|\.)dropbox\.com$/i, "Dropbox"], [/(^|\.)mediafire\.com$/i, "MediaFire"], [/(^|\.)moddb\.com$/i, "ModDB"],
+  [/^1drv\.ms$|^onedrive\.live\.com$/i, "OneDrive"],
 ];
 
 function hostName(url: string) {
   try {
     const host = new URL(url).hostname;
-    return HOSTS.find(([pattern]) => pattern.test(host))?.[1] ?? host.replace(/^www./, "");
+    return HOSTS.find(([pattern]) => pattern.test(host))?.[1] ?? host.replace(/^www\./, "");
   } catch {
     return "";
   }
