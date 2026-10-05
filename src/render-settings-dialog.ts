@@ -8,6 +8,7 @@ type SettingsDialogContext = {
   profileCandidates: StarcraftProfileCandidate[];
   profileDirDraft: string;
   showLocalDevCatalog: boolean;
+  busy: boolean;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
@@ -28,7 +29,10 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
     profileCandidates,
     profileDirDraft,
     showLocalDevCatalog,
+    busy,
   } = context;
+  // A catalog reload during an install would mark the app idle while it still works.
+  const waiting = busy ? 'disabled title="Wait until the current task finishes"' : "";
   return `
     <dialog id="settings-dialog">
       <form method="dialog" class="dialog-card">
@@ -38,7 +42,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
           <input id="catalog-source" spellcheck="false" value="${escapeHtml(catalogSourceDraft)}" placeholder="/path/to/catalog.json or https://…/catalog.json" />
           <small>Releases use the community cloud catalog by default. You can choose another HTTPS catalog or a local development catalog here.</small>
         </label>
-        <div class="directory-actions"><button type="button" class="ghost" data-action="use-cloud-catalog">Use community cloud</button>${showLocalDevCatalog ? '<button type="button" class="ghost" data-action="use-local-catalog">Use local dev catalog</button>' : ""}</div>
+        <div class="directory-actions"><button type="button" class="ghost" data-action="use-cloud-catalog" ${waiting}>Use community cloud</button>${showLocalDevCatalog ? `<button type="button" class="ghost" data-action="use-local-catalog" ${waiting}>Use local dev catalog</button>` : ""}</div>
         <section class="detected-directory">
           <small>STARCRAFT II DIRECTORY</small>
           <strong>${gameDir ? escapeHtml(gameDir) : "No installation detected"}</strong>
@@ -63,7 +67,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
         ${installSetting()}
         <div class="dialog-actions">
           <button class="ghost" value="cancel">Cancel</button>
-          <button class="primary" value="default" data-action="save-settings">Reload catalog</button>
+          <button class="primary" value="default" data-action="save-settings" ${waiting}>Reload catalog</button>
         </div>
       </form>
     </dialog>`;

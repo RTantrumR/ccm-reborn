@@ -105,6 +105,7 @@ function render() {
       profileCandidates,
       profileDirDraft: settingsProfileDirDraft,
       showLocalDevCatalog: import.meta.env.DEV,
+      busy,
     })}
     ${renderInstallConfirm(installFlow)}
     ${localModDialog()}
@@ -348,6 +349,8 @@ const detectGameDirectory = () => runTask("Looking for StarCraft II…", async (
 });
 
 async function loadCatalog() {
+  // Its end clears "busy", which must stay set while an install runs.
+  if (busy) return;
   if (!catalogSource) {
     catalog = mergeCatalog(null, await refreshLocalMods());
     message = "Set a catalog source in Settings.";
