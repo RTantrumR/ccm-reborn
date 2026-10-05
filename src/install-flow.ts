@@ -135,7 +135,8 @@ async function keepForLater(flow: InstallFlow, campaign: Campaign) {
   } catch (error) {
     if (modal) modal = { ...modal, stage: "failed", error: String(error) };
   } finally {
-    flow.setActivity(null); flow.setBusy(false); flow.render();
+    // The dialog says how it went; the download's progress lines go.
+    flow.setActivity(null); flow.setBusy(false); flow.setMessage("", "neutral"); flow.render();
   }
 }
 export const requestRestore = (flow: InstallFlow, targetPath: string) => void begin(flow, { kind: "restore", targetPath });
