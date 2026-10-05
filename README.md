@@ -52,7 +52,7 @@ until you choose to move or remove them.
 
 The campaigns you see come from the community list online. If you want a
 different list, for example one a mod author shares for testing, you can
-change it in **Sources**.
+change it in **Settings**.
 
 ## Need help?
 
@@ -102,7 +102,7 @@ The `tauri dev` script selects a free localhost port each time, so it does not c
 enumerates campaign/dependency operations and the bank/save/progress changes
 CCM can verify (ambiguous or unreadable saves are called out rather than
 guessed). Once an explicit StarCraft II account profile is selected in
-**Sources**, the review dialog enables **Apply installation**. The same
+**Settings**, the review dialog enables **Apply installation**. The same
 transactional Rust core is used by the UI and `ccm install`; it requires SC2
 to be closed and rolls back profile and campaign files on failure.
 
@@ -143,7 +143,7 @@ live game, `install` and `restore` also require the exact `--profile-dir`.
 `restore` always requires one explicit campaign `--target`; it never guesses
 which of the four campaign slots you meant.
 
-Choose the directory that contains SC2's `Maps` directory (on Windows, it normally also contains `SC2Data` and `Support64`) in **Sources**. Use a disposable SC2 install for development.
+Choose the directory that contains SC2's `Maps` directory (on Windows, it normally also contains `SC2Data` and `Support64`) in **Settings**. Use a disposable SC2 install for development.
 
 Each catalog entry requires metadata for display and a verified package:
 
@@ -206,7 +206,7 @@ The publisher creates readable immutable archive names such as
 }
 ```
 
-Point **Sources** at the HTTPS URL for `catalog.json`. The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
+Point **Settings** at the HTTPS URL for `catalog.json`. The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
 
 After publishing, verify every public package size with `npm run catalog:smoke`.
 Add `-- --verify f-yuri-of-the-swarm` to download and verify one package's SHA-256 too.

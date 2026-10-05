@@ -32,7 +32,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
     <dialog id="settings-dialog">
       <form method="dialog" class="dialog-card">
         <button class="close" value="cancel" aria-label="Close">×</button>
-        <p class="eyebrow">SOURCES</p><h2>Catalog & game location</h2>
+        <p class="eyebrow">SETTINGS</p><h2>Catalog & game location</h2>
         <label>Catalog source
           <input id="catalog-source" spellcheck="false" value="${escapeHtml(catalogSourceDraft)}" placeholder="/path/to/catalog.json or https://…/catalog.json" />
           <small>Releases use the community cloud catalog by default. You can choose another HTTPS catalog or a local development catalog here.</small>

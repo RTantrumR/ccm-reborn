@@ -13,6 +13,10 @@ export type Campaign = {
   addedAt?: number;
   // A mod in the original CCM's folder (Maps/CustomCampaigns), installed from there in place.
   isCcm?: boolean;
+  // A Campaign Archive mod: downloaded from its author's Drive/MEGA page, not installed here.
+  link?: { download: string; docs: string | null };
+  // Picture URLs, at most 5; the first one leads.
+  images?: string[];
 };
 
 export type LocalModEntry = {
@@ -47,6 +51,8 @@ export type Catalog = {
   updatedAt: string;
   sourceKind: "local" | "remote" | "cached";
   campaigns: Campaign[];
+  // Local catalogs only: titles left out because their package file is missing.
+  missingPackages?: string[];
 };
 
 export type CurrentCampaign = {

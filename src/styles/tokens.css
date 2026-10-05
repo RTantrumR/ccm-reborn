@@ -25,6 +25,8 @@
   --border-accent-hi: rgba(255, 255, 255, .30); /* outlined buttons */
   --border-muted: rgba(255, 255, 255, .18);     /* chips, inputs */
   --divider: rgba(255, 255, 255, .09);
+  --scrollbar-thumb: rgba(255, 255, 255, .16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, .30);
 
   /* Text. Must-read text (warnings, control labels, why-disabled hints)
      never uses --text-dim or --text-faint: those are metadata only. */

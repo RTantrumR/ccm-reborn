@@ -1,5 +1,6 @@
 import type { Campaign, Catalog, CurrentCampaign, Inspection } from "./types";
 import { campaignSlot, formatBytes, isCommunityCampaign } from "./domain";
+import { renderGallery } from "./gallery";
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!,
@@ -19,6 +20,8 @@ const FILTERS = [
 
 export type LibraryContext = {
   catalog: Catalog | null;
+  // Campaign Archive mods, listed after the catalog.
+  archive: Campaign[];
   inspection: Inspection | null;
   selectedId: string;
   filter: string; // campaignSlot() id, or "" for every campaign
@@ -29,7 +32,47 @@ export type LibraryContext = {
   isCurrentCatalogCampaign: (campaign: Campaign) => boolean;
 };
 
+const HOSTS: [RegExp, string][] = [
+  [/(^|.)mega.(nz|io|co.nz)$/i, "MEGA"], [/^drive.google.com$|^docs.google.com$/i, "Google Drive"],
+  [/(^|.)dropbox.com$/i, "Dropbox"], [/(^|.)mediafire.com$/i, "MediaFire"], [/(^|.)moddb.com$/i, "ModDB"],
+  [/^1drv.ms$|^onedrive.live.com$/i, "OneDrive"],
+];
+
+function hostName(url: string) {
+  try {
+    const host = new URL(url).hostname;
+    return HOSTS.find(([pattern]) => pattern.test(host))?.[1] ?? host.replace(/^www./, "");
+  } catch {
+    return "";
+  }
+}
+
+// Links in a description open in the browser. Only https ones: the same rule as open_web_link.
+const LINK = /https:\/\/[^\s<>()\]]+/g;
+
+function linkedText(text: string) {
+  let html = "";
+  let last = 0;
+  for (const match of text.matchAll(LINK)) {
+    // A sentence's closing punctuation isn't part of the link.
+    const url = match[0].replace(/[.,;:!?'"]+$/, "");
+    html += `${escapeHtml(text.slice(last, match.index))}<button class="text-link" data-action="open-link" data-url="${escapeHtml(url)}">${escapeHtml(url)}</button>`;
+    last = match.index + url.length;
+  }
+  return html + escapeHtml(text.slice(last));
+}
+
+// An archive mod is downloaded from its author’s page in the browser.
+function renderLinkRow(link: NonNullable<Campaign["link"]>) {
+  const host = hostName(link.download);
+  return `<div class="install-row">
+    <button class="primary install" data-action="open-link" data-url="${escapeHtml(link.download)}">${host ? `Download from ${escapeHtml(host)}` : "Download"}</button>
+    ${link.docs ? `<button class="ghost" data-action="open-link" data-url="${escapeHtml(link.docs)}">Patch notes</button>` : ""}
+  </div>`;
+}
+
 function renderInstallRow(campaign: Campaign, context: LibraryContext) {
+  if (campaign.link) return renderLinkRow(campaign.link);
   const working = context.busy && context.installingCampaignId === campaign.id;
   const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"'
     : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
@@ -45,15 +88,16 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
   const current = context.inspection?.activeCampaigns.find((item: CurrentCampaign) => item.slot === slot);
   const tags = SHOW_TAGS ? `<div class="tags">${campaign.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : "";
   return `
+    ${renderGallery(campaign)}
     <div class="detail-head">
       <p class="eyebrow">${escapeHtml(campaign.requirements.campaign)}</p>
-      <div class="title-row"><h2>${escapeHtml(campaign.title)}</h2><span class="version">v${escapeHtml(campaign.version)}</span></div>
+      <div class="title-row"><h2>${escapeHtml(campaign.title)}</h2>${campaign.version ? `<span class="version">v${escapeHtml(campaign.version)}</span>` : ""}</div>
       <p class="byline">${escapeHtml(campaign.author)}</p>
     </div>
     <div class="detail-body">
-      <p class="description">${escapeHtml(campaign.description)}</p>
-      <div class="metadata">
-        <div><small>SIZE</small><strong>${formatBytes(campaign.package.size)}</strong></div>
+      <p class="description">${linkedText(campaign.description)}</p>
+      <div class="metadata${campaign.link ? " single" : ""}">
+        ${campaign.link ? "" : `<div><small>SIZE</small><strong>${formatBytes(campaign.package.size)}</strong></div>`}
         <div><small>CAMPAIGN</small><strong>${escapeHtml(campaign.requirements.campaign)}</strong></div>
       </div>
       ${tags}
@@ -65,7 +109,7 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
 function renderCard(campaign: Campaign, selected: Campaign | null, context: LibraryContext) {
   const classes = ["campaign-card", `faction-${campaignSlot(campaign.requirements.campaign)}`, campaign.id === selected?.id ? "selected" : ""].join(" ").trim();
   return `<button class="${classes}" data-library-campaign="${escapeHtml(campaign.id)}">
-    <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)}</p></div>
+    <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(campaign.author)}${campaign.version ? ` · v${escapeHtml(campaign.version)}` : ""}</p></div>
     ${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}
   </button>`;
 }
@@ -76,7 +120,7 @@ function renderFilters(active: string) {
 }
 
 export function renderLibrary(context: LibraryContext) {
-  const campaigns = (context.catalog?.campaigns ?? []).filter((campaign) => isCommunityCampaign(campaign)
+  const campaigns = [...(context.catalog?.campaigns ?? []), ...context.archive].filter((campaign) => isCommunityCampaign(campaign)
     && (!context.filter || campaignSlot(campaign.requirements.campaign) === context.filter));
   // The selection follows the filter: a pick outside it falls back to the first visible one.
   const selected = campaigns.find((campaign) => campaign.id === context.selectedId) ?? campaigns[0] ?? null;

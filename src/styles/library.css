@@ -41,7 +41,7 @@
 .title-row { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
 .title-row h2 { margin: var(--space-1) 0 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 .version { margin-top: 3px; padding: 4px 8px; color: var(--text-body); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-meta) var(--font-mono); }
-.description { max-width: 660px; margin: 0; color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; }
+.description { max-width: 660px; margin: 0; color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
 .metadata { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin: 20px 0 var(--space-3); overflow: hidden; background: var(--divider); border: 1px solid var(--divider); border-radius: var(--radius); }
 .metadata div { padding: 10px var(--space-3); background: var(--bg-inset); }
 .metadata small { display: block; margin-bottom: var(--space-1); color: var(--text-faint); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .1em; }
@@ -69,3 +69,38 @@
   .workspace { grid-template-columns: 1fr; }
   .metadata { grid-template-columns: 1fr; }
 }
+
+/* Archive mod pictures: one at a time at the top of the detail panel. */
+.gallery { position: relative; background: #000; border-bottom: 1px solid var(--divider); }
+.gallery-frame { display: block; width: 100%; padding: 0; overflow: hidden; background: none; border: 0; cursor: zoom-in; }
+.gallery-frame img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+.gallery-frame:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gallery-nav { position: absolute; top: 50%; display: grid; place-items: center; width: 36px; height: 52px; padding: 0 0 4px; color: var(--text-hi); background: rgba(0, 0, 0, .55); border: 1px solid var(--border-accent); border-radius: var(--radius); font: 400 30px/1 var(--font-body); transform: translateY(-50%); }
+.gallery-nav:hover { background: rgba(0, 0, 0, .8); border-color: var(--border-accent-hi); }
+.gallery-nav:focus-visible { outline: 2px solid var(--accent); }
+.gallery .prev { left: var(--space-2); }
+.gallery .next { right: var(--space-2); }
+.gallery-dots { position: absolute; bottom: var(--space-2); left: 50%; display: flex; gap: 6px; transform: translateX(-50%); pointer-events: none; }
+.gallery-dots i { width: 7px; height: 7px; background: rgba(255, 255, 255, .4); border-radius: 50%; box-shadow: 0 0 2px rgba(0, 0, 0, .8); }
+.gallery-dots i.on { background: var(--text-hi); }
+.slide-next { animation: slide-from-right .22s ease-out; }
+.slide-prev { animation: slide-from-left .22s ease-out; }
+@keyframes slide-from-right { from { opacity: .3; transform: translateX(24px); } }
+@keyframes slide-from-left { from { opacity: .3; transform: translateX(-24px); } }
+
+/* A picture over the whole window. */
+.lightbox { position: fixed; inset: 0; z-index: 50; overflow: hidden; display: grid; place-items: center; padding: var(--space-6) 64px; background: rgba(5, 6, 8, .92); animation: lightbox-in .15s ease-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 10px 40px rgba(0, 0, 0, .6); transform-origin: 0 0; touch-action: none; user-select: none; }
+.lightbox img.magnified { cursor: grab; }
+.lightbox img.magnified:active { cursor: grabbing; }
+.lightbox .gallery-nav { position: fixed; width: 44px; height: 64px; font-size: 36px; }
+.lightbox .prev { left: var(--space-3); }
+.lightbox .next { right: var(--space-3); }
+.lightbox-close { position: fixed; top: var(--space-3); right: var(--space-3); width: 40px; height: 40px; color: var(--text-hi); background: rgba(0, 0, 0, .55); border: 1px solid var(--border-accent); border-radius: var(--radius); font-size: 18px; }
+.lightbox-close:hover { background: rgba(0, 0, 0, .8); border-color: var(--border-accent-hi); }
+.lightbox-count { position: fixed; bottom: var(--space-4); left: 50%; color: var(--text-hi); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .1em; transform: translateX(-50%); }
+@keyframes lightbox-in { from { opacity: 0; } }
+.metadata.single { grid-template-columns: 1fr; }
+.text-link { display: inline; padding: 0; color: var(--accent); background: none; border: 0; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.text-link:hover { text-decoration-thickness: 2px; }
+.text-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

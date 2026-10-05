@@ -18,6 +18,7 @@ import { bindInstallConfirm, renderInstallConfirm, requestInstall, requestRestor
 import { renderSettingsDialog } from "./render-settings-dialog";
 import { noteLaunched, playButtonLabel, starcraftLaunching, starcraftRunning, watchStarcraft } from "./starcraft-watch";
 import { bindLocalModEvents, localModDialog, localModsHeaderButton, mergeCatalog, refreshLocalMods } from "./local-mods";
+import { archiveCampaigns, bindArchive, refreshArchive } from "./archive";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing.");
@@ -75,10 +76,10 @@ function render() {
       <p class="eyebrow">CAMPAIGN CONTROL</p>
       <nav>
         <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns</button>
+        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${(catalog?.campaigns.filter(isCommunityCampaign).length ?? 0) + archiveCampaigns().length}</strong></button>
         <button class="nav-item ${page === "mymods" ? "active" : ""}" data-page="mymods"><span>◆</span> My Mods</button>
-        <button class="nav-item ${page === "library" ? "active" : ""}" data-page="library" data-library-filter=""><span>▦</span> Library <strong>${catalog?.campaigns.filter(isCommunityCampaign).length ?? 0}</strong></button>
-        <button class="nav-item" data-action="show-settings"><span>⚙</span> Sources</button>
       </nav>
+      <button class="nav-item nav-settings" data-action="show-settings"><span>⚙</span> Settings</button>
       <div class="sidebar-footer">
         <div class="dot ${gameDir ? "" : "muted"}"></div>
         <div><small>STARCRAFT II</small><br />${gameDir ? "Detected" : "Not found"}</div>
@@ -94,7 +95,7 @@ function render() {
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath, busy })}
       ${renderLegacyMigration(catalog, savedResumes, profileDir, busy)}
-      ${page === "mymods" ? renderMyMods({ catalog, inspection, busy, gameDir, profileDir }) : page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
+      ${page === "mymods" ? renderMyMods({ catalog, inspection, busy, gameDir, profileDir }) : page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, archive: archiveCampaigns(), inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
     </main>
     ${renderSettingsDialog({
       catalogSourceDraft: settingsCatalogSourceDraft,
@@ -175,6 +176,7 @@ function bindEvents() {
     button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? ""));
   });
   bindInstallConfirm(installFlow);
+  bindArchive((text) => { message = text; messageKind = "error"; render(); });
   bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
@@ -183,6 +185,7 @@ function bindEvents() {
   document.querySelectorAll<HTMLButtonElement>("[data-action='migrate-legacy']").forEach((button) => {
     button.addEventListener("click", () => void migrateLegacySnapshot(button.dataset.campaign ?? ""));
   });
+  document.querySelector<HTMLButtonElement>("[data-action='dismiss-status']")?.addEventListener("click", () => { message = ""; render(); });
   document.querySelector<HTMLButtonElement>("[data-action='copy-diagnostics']")?.addEventListener("click", () => void copyDiagnostics());
   document.querySelector<HTMLButtonElement>("[data-action='open-log-folder']")?.addEventListener("click", () => void openDiagnosticLogFolder());
   bindLocalModEvents(
@@ -285,7 +288,7 @@ async function refreshProfiles(showMessage = false) {
       });
     }
     // Detection is ranked by the backend (most recently played first). Select it
-    // automatically so a first-run player never has to open Sources.
+    // automatically so a first-run player never has to open Settings.
     if (!profileDir && profileCandidates.length) useProfile(profileCandidates[0]);
     if (showMessage) {
       message = profileCandidates.length ? `${profileCandidates.length} StarCraft II profile(s) found.` : "No StarCraft II profiles were found.";
@@ -344,7 +347,7 @@ const detectGameDirectory = () => runTask("Looking for StarCraft II…", async (
 async function loadCatalog() {
   if (!catalogSource) {
     catalog = mergeCatalog(null, await refreshLocalMods());
-    message = "Set a catalog source in Sources.";
+    message = "Set a catalog source in Settings.";
     messageKind = "error";
     render();
     return;
@@ -353,14 +356,17 @@ async function loadCatalog() {
   message = "Loading campaigns…";
   messageKind = "neutral";
   render();
+  // The archive shows even when the catalog can't be loaded.
+  const archiveLoad = refreshArchive();
   try {
     cloudCatalog = await invoke<Catalog>("load_catalog", { source: catalogSource });
     catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
     selectedId ||= catalog?.campaigns[0]?.id ?? "";
-    message = cloudCatalog.sourceKind === "cached"
-      ? "Offline — showing the last available campaign list."
-      : "";
-    messageKind = cloudCatalog.sourceKind === "cached" ? "neutral" : "success";
+    const missing = cloudCatalog.missingPackages ?? [];
+    message = cloudCatalog.sourceKind === "cached" ? "Offline — showing the last available campaign list."
+      : missing.length === 1 ? `${missing[0]} was left out: its file is missing.`
+      : missing.length ? `${missing.length} mods were left out: their files are missing.` : "";
+    messageKind = cloudCatalog.sourceKind === "cached" || missing.length ? "neutral" : "success";
     await inspectDirectory();
   } catch (error) {
     cloudCatalog = null;
@@ -369,7 +375,10 @@ async function loadCatalog() {
     catalog = mergeCatalog(null, await refreshLocalMods());
     message = String(error);
     messageKind = "error";
+    // What's installed doesn't depend on the catalog: My Mods must still show it.
+    await inspectDirectory().catch(() => {});
   } finally {
+    await archiveLoad;
     busy = false;
     render();
   }

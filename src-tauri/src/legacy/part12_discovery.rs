@@ -1,19 +1,21 @@
-fn resolve_local_package(directory: &Path, declared_path: Option<&str>) -> Result<String, String> {
+/// `Ok(None)` when the package file isn't there (deleted, or never copied in): the catalog
+/// leaves out just that mod instead of failing as a whole.
+fn resolve_local_package(directory: &Path, declared_path: Option<&str>) -> Result<Option<String>, String> {
     let declared_path = declared_path.ok_or("Local campaigns need package.path.")?;
     let relative = safe_relative_path(declared_path)
         .map_err(|_| "Local package.path must be a contained relative path using forward slashes.".to_string())?;
     let catalog_root = directory.canonicalize().map_err(io_error)?;
     let candidate = catalog_root.join(relative);
-    let package = candidate
-        .canonicalize()
-        .map_err(|_| format!("Local package {} was not found.", declared_path))?;
+    let Ok(package) = candidate.canonicalize() else {
+        return Ok(None);
+    };
     if !package.is_file() {
         return Err("Local package.path must point to a file.".into());
     }
     if !package.starts_with(&catalog_root) {
         return Err("Local package.path must stay inside the catalog directory.".into());
     }
-    Ok(package.display().to_string())
+    Ok(Some(package.display().to_string()))
 }
 
 fn looks_like_starcraft(root: &Path) -> bool {
@@ -473,6 +475,7 @@ pub fn run() {
             launch_starcraft,
             starcraft_status,
             starcraft_is_running,
+            open_web_link,
             close_starcraft,
             resolve_starcraft_profile
         ])

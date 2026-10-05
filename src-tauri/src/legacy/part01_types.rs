@@ -95,6 +95,8 @@ pub struct LoadedCatalog {
     updated_at: String,
     source_kind: String,
     campaigns: Vec<ResolvedCatalogCampaign>,
+    // Titles of local catalog mods left out because their package file is missing.
+    missing_packages: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]

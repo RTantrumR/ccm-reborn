@@ -168,3 +168,26 @@ fn switching_between_mods_without_dependencies_keeps_each_ones_saves_apart() {
     sandbox.switch("mod-b", "mod-a");
     assert!(sandbox.profile.join("Saves/Campaign/Mod A mission.SC2Save").is_file());
 }
+
+// A local catalog whose package file is gone leaves out that mod, not the whole catalog.
+#[test]
+fn local_catalog_leaves_out_mods_with_missing_packages() {
+    let root = std::env::temp_dir().join(format!("ccm-catalog-{}", Uuid::new_v4()));
+    fs::create_dir_all(root.join("packages")).unwrap();
+    fs::write(root.join("packages/present.zip"), b"zip").unwrap();
+    let entry = |id: &str, title: &str, path: &str| serde_json::json!({
+        "id": id, "title": title, "author": "Author", "version": "1.0", "description": "A mod.",
+        "tags": [], "requirements": { "campaign": "Wings of Liberty" },
+        "package": { "path": path, "sha256": "a".repeat(64), "size": 3 }
+    });
+    let document = serde_json::json!({
+        "format": 1, "name": "Test", "updatedAt": "2026-10-05",
+        "campaigns": [entry("gone", "Gone Mod", "packages/gone.zip"), entry("present", "Present Mod", "packages/present.zip")]
+    });
+    fs::write(root.join("catalog.json"), document.to_string()).unwrap();
+
+    let loaded = load_catalog_blocking(root.join("catalog.json").display().to_string()).unwrap();
+    assert_eq!(loaded.campaigns.iter().map(|campaign| campaign.id.as_str()).collect::<Vec<_>>(), ["present"]);
+    assert_eq!(loaded.missing_packages, ["Gone Mod"]);
+    let _ = fs::remove_dir_all(root);
+}

@@ -2,6 +2,8 @@ import type { Campaign, Inspection } from "./types";
 
 export function campaignSlot(campaign: string) {
   const value = campaign.toLowerCase();
+  // An archive mod made for every campaign (Library filter "All" only).
+  if (value === "all campaigns") return "all";
   if (value.includes("wings") || value.includes("liberty") || value.includes("wol")) return "wings-of-liberty";
   if (value.includes("heart") || value.includes("swarm") || value.includes("hots")) return "heart-of-the-swarm";
   if (value.includes("legacy") || value.includes("void") || value.includes("lotv")) return "legacy-of-the-void";

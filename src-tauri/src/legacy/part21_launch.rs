@@ -135,3 +135,34 @@ async fn launch_starcraft(window: tauri::Window) -> Result<(), String> {
         .await
         .map_err(|error| format!("Launcher worker failed: {error}"))?
 }
+
+/// Opens an archive mod's download or patch-notes page in the default browser. Only a
+/// well-formed https:// link: these come from Discord posts, not from the app.
+#[tauri::command]
+fn open_web_link(url: String) -> Result<(), String> {
+    let refused = || "That link can't be opened.".to_string();
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|_| refused())?;
+    if parsed.scheme() != "https" || parsed.host_str().is_none() {
+        return Err(refused());
+    }
+    open_in_browser(parsed.as_str()).map_err(|_| "The browser couldn't be opened.".to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn open_in_browser(url: &str) -> Result<(), ()> {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let operation = "open\0".encode_utf16().collect::<Vec<_>>();
+    let target = format!("{url}\0").encode_utf16().collect::<Vec<_>>();
+    let result = unsafe {
+        ShellExecuteW(std::ptr::null_mut(), operation.as_ptr(), target.as_ptr(), std::ptr::null(), std::ptr::null(), SW_SHOWNORMAL)
+    };
+    if result as isize <= 32 { Err(()) } else { Ok(()) }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn open_in_browser(url: &str) -> Result<(), ()> {
+    let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+    Command::new(opener).arg(url).spawn().map(|_| ()).map_err(|_| ())
+}

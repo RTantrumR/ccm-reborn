@@ -153,3 +153,9 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
   main { padding: 0 var(--space-4) 22px; }
   main > header { grid-template-columns: 1fr; align-items: start; padding-top: 22px; }
 }
+/* Settings sits at the bottom, just above the game's status. */
+.nav-settings { margin-top: auto; }
+.nav-settings + .sidebar-footer { margin-top: var(--space-2); }
+.status-close { flex: 0 0 auto; width: 24px; height: 24px; margin: -2px -4px 0 0; padding: 0; color: var(--text-body); background: none; border: 0; border-radius: var(--radius); font-size: var(--fs-meta); }
+.status-close:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.status-close:focus-visible { outline: 2px solid var(--accent); }

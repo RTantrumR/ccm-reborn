@@ -35,9 +35,12 @@ export function renderInstallStatus(options: {
   const diagnostics = messageKind === "error" && failure
     ? `<div class="diagnostics-actions"><button class="ghost compact" data-action="copy-diagnostics">Copy diagnostics</button>${logPath ? `<button class="ghost compact" data-action="open-log-folder">Open logs folder</button><code>${escapeHtml(logPath)}</code>` : ""}</div>`
     : "";
+  // A finished message can be closed; one about work still running can't.
+  const closable = !busy && !activity;
   return `<section class="status ${messageKind} ${activity ? "installing" : ""} ${working ? "working" : ""}" role="status" aria-live="polite">
     <span>${messageKind === "success" ? "✓" : messageKind === "error" ? "!" : activity ? "↻" : working ? "" : "i"}</span>
     <div class="status-copy"><p>${escapeHtml(message)}</p>${activity ? `<div class="install-progress"><div><small>${escapeHtml(activity.phase.replaceAll("-", " ").toUpperCase())}</small><strong>${escapeHtml(detail)}</strong></div><div class="progress-track" aria-label="Installation progress"><i style="width: ${percent ?? 100}%"></i></div></div>` : ""}${diagnostics}</div>
+    ${closable ? '<button class="status-close" data-action="dismiss-status" aria-label="Close">✕</button>' : ""}
   </section>`;
 }
 
