@@ -36,11 +36,9 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
     context.catalog?.campaigns.filter((campaign) => isCommunityCampaign(campaign) && campaignSlot(campaign.requirements.campaign) === slot.id) ?? [],
     context.savedResumes,
   );
-  const currentPackage = context.catalog?.campaigns.find((campaign) =>
-    campaignSlot(campaign.requirements.campaign) === slot.id && context.isCurrentCatalogCampaign(campaign)
-  );
-  const currentTitle = current?.title ?? "Unknown";
-  const currentMeta = current ? `Version ${current.version}` : "";
+  // An unmodified slot is Blizzard's campaign; say so instead of the backend's "untracked" wording.
+  const currentTitle = !current ? "Unknown" : current.isModified ? current.title : `Original ${slot.title}`;
+  const currentMeta = !current ? "" : current.isModified ? `Version ${current.version}` : "Blizzard";
   const managed = context.inspection?.managedCampaigns.find((campaign) => campaign.slot === slot.id);
   const activeResume = managed ? resumeFor(context.savedResumes, managed.id) : null;
 
@@ -53,7 +51,6 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
       </header>
       <section class="current-install">
         <div class="current-campaign-copy"><small>PLAYING NOW</small><strong>${escapeHtml(currentTitle)}</strong>${currentMeta ? `<span>${escapeHtml(currentMeta)}</span>` : ""}${managed ? `<div class="resume-instruction"><strong>${activeResume?.latestSave ? `Continue from ${escapeHtml(resumeCheckpoint(activeResume) ?? "your last save")}` : "Ready to start"}</strong><span>${escapeHtml(resumeInstruction(activeResume))}</span></div>` : ""}</div>
-        <div class="current-slot-actions"><button class="primary compact open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button>${currentPackage || managed ? `<details class="campaign-options"><summary>More</summary><div>${currentPackage ? `<button class="ghost repair" data-action="install" data-campaign="${escapeHtml(currentPackage.id)}" ${!context.gameDir || !context.profileDir || context.busy ? "disabled" : ""}>Repair files</button>` : ""}${managed ? `<button class="ghost repair" data-action="restore" data-target="${escapeHtml(managed.targetPath)}" ${!context.gameDir || context.busy || !context.profileDir ? "disabled" : ""}>Restore original</button>` : ""}</div></details>` : ""}</div>
       </section>
       <section class="alternatives">
         <div class="alternative-heading"><small>MODS</small>${options.length > PREVIEW_COUNT ? `<button class="see-all" data-page="library" data-library-filter="${slot.id}">See all</button>` : ""}</div>

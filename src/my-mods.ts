@@ -127,27 +127,6 @@ function collectEntries(catalog: Catalog | null): Entry[] {
   return entries;
 }
 
-function switchButton(attributes: string, context: MyModsContext) {
-  const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"'
-    : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
-    : context.busy ? "disabled" : "";
-  return `<button class="primary compact" ${attributes} ${disabled}>Switch</button>`;
-}
-
-function renderRow(entry: Entry, playing: boolean, context: MyModsContext) {
-  const meta = [entry.author, entry.version ? `v${entry.version}` : ""].filter(Boolean).join(" · ");
-  const action = playing ? ""
-    : entry.installable ? switchButton(`data-action="install" data-campaign="${escapeHtml(entry.id)}"`, context)
-    : '<span class="mymods-gone">No longer available</span>';
-  const remove = entry.isLocal
-    ? `<button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(entry.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button>`
-    : "";
-  return `<div class="mymods-row${playing ? " playing" : ""}">
-    <div class="option-copy"><strong><span class="option-title">${escapeHtml(entry.title)}</span>${entry.isLocal ? '<span class="local-pill">LOCAL</span>' : ""}${entry.isCcm ? '<span class="local-pill">CCM</span>' : ""}${playing ? '<span class="installed">PLAYING</span>' : ""}</strong>${meta ? `<span>${escapeHtml(meta)}</span>` : ""}${remove ? `<span class="option-remove">${remove}</span>` : ""}</div>
-    ${action}
-  </div>`;
-}
-
 const same = (left: string, right: string) => left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
 
 /// What is in the slot right now: CCM Reborn's managed mod, else a mod the original
@@ -161,32 +140,68 @@ function playingIn(slot: typeof SLOTS[number], entries: Entry[], context: MyMods
   return { id: (matches.find((entry) => entry.isCcm) ?? matches[0])?.id ?? "", modified: true };
 }
 
+const versioned = (title: string, version: string) => [title, version ? `v${version}` : ""].filter(Boolean).join(" · ");
+
+function renderCurrent(slot: typeof SLOTS[number], playing: { id: string; modified: boolean }, entries: Entry[], context: MyModsContext) {
+  const entry = entries.find((item) => item.id === playing.id);
+  const active = context.inspection?.activeCampaigns.find((campaign) => campaign.slot === slot.id);
+  const [title, meta, pill] = entry
+    ? [entry.title, versioned(entry.author, entry.version), entry.isLocal ? "LOCAL" : entry.isCcm ? "CCM" : ""]
+    : playing.modified && active
+      ? [active.title, versioned(active.author, active.version), ""]
+      : [`Original ${slot.title}`, "Blizzard", ""];
+  // Room for the current mod's screenshot once the CCM website can serve them.
+  return `<div class="mymods-current">
+    <small>PLAYING NOW</small>
+    <strong>${escapeHtml(title)}${pill ? ` <span class="local-pill">${pill}</span>` : ""}</strong>
+    ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
+  </div>`;
+}
+
+function renderSwitcher(slot: typeof SLOTS[number], playing: { id: string; modified: boolean }, entries: Entry[], context: MyModsContext) {
+  const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"'
+    : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
+    : context.busy ? "disabled" : "";
+  const unknownMod = playing.modified && !playing.id;
+  const sorted = [...entries].sort((left, right) => left.title.localeCompare(right.title) || right.version.localeCompare(left.version));
+  const options = [
+    // Back to Blizzard's campaign is safe only when the current mod is recoverable.
+    `<option value="original" ${playing.modified ? "" : "selected"} ${unknownMod ? "disabled" : ""}>Original ${slot.title}</option>`,
+    unknownMod ? '<option value="" selected disabled>A mod that is not in your list</option>' : "",
+    ...sorted.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === playing.id ? "selected" : ""} ${entry.installable ? "" : "disabled"}>${escapeHtml(versioned(entry.title, entry.version))}${entry.installable ? "" : " (no longer available)"}</option>`),
+  ].join("");
+  return `<label class="mymods-switch"><span>Switch to</span><select class="mod-switcher" data-switch-target="${slot.targetPath}" ${disabled}>${options}</select></label>`;
+}
+
+function renderAdded(entries: Entry[], context: MyModsContext) {
+  const added = entries.filter((entry) => entry.isLocal);
+  if (!added.length) return "";
+  return `<details class="mymods-added"><summary>Added from your computer</summary>${added.map((entry) => `
+    <div><span>${escapeHtml(versioned(entry.title, entry.version))}</span><button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(entry.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button></div>`).join("")}</details>`;
+}
+
 function renderGroup(slot: typeof SLOTS[number], entries: Entry[], context: MyModsContext) {
   const playing = playingIn(slot, entries, context);
-  const sorted = [...entries].sort((left, right) =>
-    Number(right.id === playing.id) - Number(left.id === playing.id)
-    || right.installedAt - left.installedAt
-    || left.title.localeCompare(right.title));
-  // Switching back to Blizzard's campaign is always one of the choices; it can
-  // only empty the slot when the current mod is known (and so recoverable).
-  const original = `<div class="mymods-row${playing.modified ? "" : " playing"}">
-    <div class="option-copy"><strong><span class="option-title">Original ${slot.title}</span>${playing.modified ? "" : '<span class="installed">PLAYING</span>'}</strong><span>Blizzard</span></div>
-    ${playing.id ? switchButton(`data-action="restore" data-target="${slot.targetPath}"`, context) : ""}
-  </div>`;
   return `<article class="mymods-group faction-${slot.id}">
     <p class="eyebrow">${slot.title}</p>
-    ${sorted.map((entry) => renderRow(entry, entry.id === playing.id, context)).join("")}
-    ${original}
+    ${renderCurrent(slot, playing, entries, context)}
+    ${renderSwitcher(slot, playing, entries, context)}
+    ${renderAdded(entries, context)}
   </article>`;
 }
 
+/// One card per base campaign, so all four fit on one screen however many mods
+/// there are: what is playing, and a dropdown to switch.
 export function renderMyMods(context: MyModsContext) {
   const entries = collectEntries(context.catalog);
-  if (!entries.length) {
-    return `<section class="mymods-empty"><h2>No mods yet</h2><p>Mods you install, or add from your computer, show up here so you can switch between them in one click.</p></section>`;
-  }
-  return `<section class="mymods">${SLOTS
-    .map((slot) => ({ slot, items: entries.filter((entry) => entry.slot === slot.id) }))
-    .filter((group) => group.items.length)
-    .map((group) => renderGroup(group.slot, group.items, context)).join("")}</section>`;
+  return `<section class="mymods">${SLOTS.map((slot) =>
+    renderGroup(slot, entries.filter((entry) => entry.slot === slot.id), context)).join("")}</section>`;
+}
+
+/// Picking a mod (or "Original") asks once, then switches. Cancelling re-renders,
+/// which puts the dropdown back on the current mod.
+export function bindMyMods(onPick: (targetPath: string, value: string) => void) {
+  document.querySelectorAll<HTMLSelectElement>("select[data-switch-target]").forEach((select) => {
+    select.addEventListener("change", () => onPick(select.dataset.switchTarget ?? "", select.value));
+  });
 }

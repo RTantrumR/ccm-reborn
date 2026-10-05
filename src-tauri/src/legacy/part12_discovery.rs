@@ -469,7 +469,9 @@ pub fn run() {
             remove_local_mod,
             list_installed_mods,
             list_ccm_store,
-            install_ccm_store_mod
+            install_ccm_store_mod,
+            launch_starcraft,
+            resolve_starcraft_profile
         ])
         .run(tauri::generate_context!())
         .expect("error while running CCM Reborn");

@@ -15,17 +15,7 @@
 .current-install small, .alternative-heading small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
 .current-install > .current-campaign-copy > strong { color: var(--text-hi); font-size: var(--fs-title); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .current-install > .current-campaign-copy > span { color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
-.current-slot-actions { display: grid; justify-items: end; gap: var(--space-2); flex: 0 0 auto; }
-.current-slot-actions .open-battle-net { min-width: 112px; }
 
-.campaign-options { position: relative; }
-.campaign-options summary { color: var(--text-body); cursor: pointer; font: var(--fs-meta) var(--font-body); list-style: none; }
-.campaign-options summary:hover { color: var(--text-hi); }
-.campaign-options summary::-webkit-details-marker { display: none; }
-.campaign-options summary::after { content: "⌄"; margin-left: var(--space-1); color: var(--accent); }
-.campaign-options[open] summary::after { content: "⌃"; }
-.campaign-options > div { display: grid; gap: var(--space-1); min-width: 140px; margin-top: var(--space-2); padding: 6px; background: var(--bg-row-hover); border: 1px solid var(--border-accent); border-radius: var(--radius); }
-.campaign-options .repair { width: 100%; padding: 7px 10px; font-size: var(--fs-meta); }
 
 .resume-instruction { display: grid; max-width: 360px; gap: 3px; margin: 10px 0 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
 .resume-instruction strong { color: var(--accent); font-weight: 600; }
@@ -53,14 +43,22 @@
 .local-pill { flex: 0 0 auto; padding: 1px 5px; color: var(--text-muted); border: 1px solid var(--border-muted); border-radius: var(--radius); font: 600 var(--fs-label)/1.4 var(--font-body); letter-spacing: .08em; }
 @media (max-width: 1100px) { .campaign-dashboard { grid-template-columns: 1fr; } }
 
-/* My Mods: what the player has installed, grouped by base campaign. */
-.mymods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
-.mymods-group { padding: var(--space-3) var(--space-4) var(--space-2); background: var(--bg-row); border: 1px solid var(--border-accent); border-top: 2px solid var(--faction, var(--accent)); border-radius: var(--radius); }
-.mymods-group > .eyebrow { margin-bottom: var(--space-2); color: var(--faction, var(--accent)); }
-.mymods-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--divider); }
-.mymods-row.playing .option-title { color: var(--text-hi); }
-.mymods-gone { color: var(--text-body); font: var(--fs-meta) var(--font-body); }
-.mymods-empty { padding: var(--space-6); text-align: center; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
-.mymods-empty h2 { margin: 0 0 var(--space-2); font-size: var(--fs-card); }
-.mymods-empty p { max-width: 460px; margin: 0 auto; color: var(--text-body); line-height: 1.6; }
+/* My Mods: one compact card per base campaign, so all four fit on one screen. */
+.mymods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: stretch; }
+.mymods-group { display: grid; align-content: start; gap: var(--space-3); padding: var(--space-4); background: var(--bg-row); border: 1px solid var(--border-accent); border-top: 2px solid var(--faction, var(--accent)); border-radius: var(--radius); }
+.mymods-group > .eyebrow { color: var(--faction, var(--accent)); }
+.mymods-current { display: grid; gap: 3px; min-width: 0; padding: var(--space-3); background: var(--bg-inset); border-radius: var(--radius); }
+.mymods-current small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
+.mymods-current strong { color: var(--text-hi); font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.mymods-current span:not(.local-pill) { color: var(--text-body); font: var(--fs-meta) var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mymods-current .local-pill { vertical-align: middle; }
+.mymods-switch { display: grid; gap: 6px; color: var(--text-body); font: 500 var(--fs-small) var(--font-body); }
+.mod-switcher { width: 100%; min-width: 0; padding: 9px 10px; color: var(--text-hi); background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-small) var(--font-body); cursor: pointer; }
+.mod-switcher:hover:not(:disabled) { border-color: var(--border-accent-hi); }
+.mod-switcher:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-tint); }
+.mod-switcher:disabled { color: var(--text-muted); cursor: not-allowed; }
+.mod-switcher option { color: var(--text-hi); background: var(--bg-row); }
+.mymods-added summary { color: var(--text-body); cursor: pointer; font: var(--fs-meta) var(--font-body); }
+.mymods-added summary:hover { color: var(--text-hi); }
+.mymods-added > div { display: flex; justify-content: space-between; gap: var(--space-3); padding: 6px 0; border-top: 1px solid var(--divider); color: var(--text-body); font: var(--fs-meta) var(--font-body); }
 @media (max-width: 1100px) { .mymods { grid-template-columns: 1fr; } }

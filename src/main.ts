@@ -12,9 +12,9 @@ import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
 import { renderGameBanner } from "./game-banner";
-import { myModsCampaign, refreshInstalledMods, renderMyMods, withCcmStore } from "./my-mods";
+import { bindMyMods, myModsCampaign, refreshInstalledMods, renderMyMods, withCcmStore } from "./my-mods";
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
-import { bindInstallConfirm, renderInstallConfirm, requestInstall } from "./install-flow";
+import { bindInstallConfirm, renderInstallConfirm, requestInstall, requestRestore } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
 import { bindLocalModEvents, localModDialog, localModsHeaderButton, mergeCatalog, refreshLocalMods } from "./local-mods";
 
@@ -61,7 +61,7 @@ const installFlow = {
   setCampaignId: (value: string) => { activeInstallCampaignId = value; },
   setFailure: (value: InstallFailure | null) => { lastInstallFailure = value; },
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
-  inspectDirectory, render,
+  inspectDirectory, render, restore: (targetPath: string) => restoreOriginals(targetPath),
 };
 
 function render() {
@@ -79,6 +79,7 @@ function render() {
         <div class="dot ${gameDir ? "" : "muted"}"></div>
         <div><small>STARCRAFT II</small><br />${gameDir ? "Detected" : "Not found"}</div>
       </div>
+      ${gameDir ? `<button class="primary play-button" data-action="play-sc2" ${busy ? "disabled" : ""}>Play StarCraft II</button>` : ""}
     </aside>
     <main>
       <header>
@@ -170,7 +171,8 @@ function bindEvents() {
     button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? ""));
   });
   bindInstallConfirm(installFlow, () => { scrollToInstallStatus = true; });
-  document.querySelectorAll<HTMLButtonElement>("[data-action='open-battle-net']").forEach((button) => button.addEventListener("click", () => void openBattleNet()));
+  bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
+  document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
     button.addEventListener("click", () => void restoreOriginals(button.dataset.target ?? ""));
   });
@@ -241,35 +243,46 @@ async function chooseGameDirectory() {
   render();
 }
 
-async function chooseProfileDirectory() {
-  const selected = await open({ directory: true, multiple: false, title: "Choose the StarCraft II account profile" });
-  if (typeof selected !== "string") return;
-  profileDir = selected;
+/// Any folder the player picks (Documents\StarCraft II, Accounts, or a profile) resolves to
+/// one real profile in the backend, or is refused with a plain explanation.
+const resolveProfile = (path: string) => invoke<StarcraftProfileCandidate>("resolve_starcraft_profile", { path });
+
+function useProfile(profile: StarcraftProfileCandidate) {
+  profileDir = profile.path;
   settingsProfileDirDraft = profileDir;
   localStorage.setItem("ccm-profile-directory", profileDir);
-  if (!profileCandidates.some((profile) => profile.path === profileDir)) {
-    profileCandidates = [...profileCandidates, { path: profileDir, label: profileDir }];
+  if (!profileCandidates.some((candidate) => candidate.path === profileDir)) profileCandidates = [...profileCandidates, profile];
+}
+
+async function chooseProfileDirectory() {
+  const selected = await open({ directory: true, multiple: false, title: "Choose the StarCraft II folder in your Documents" });
+  if (typeof selected !== "string") return;
+  try {
+    const profile = await resolveProfile(selected);
+    useProfile(profile);
+    message = `StarCraft II account selected: ${profile.label}`;
+    messageKind = "success";
+  } catch (error) {
+    message = String(error);
+    messageKind = "error";
   }
-  message = "StarCraft II account selected.";
-  messageKind = "success";
   render();
 }
 
 async function refreshProfiles(showMessage = false) {
   try {
     profileCandidates = await invoke<StarcraftProfileCandidate[]>("detect_starcraft_profiles");
-    // Detection is already ranked by the backend (active/recent profile
-    // first). Select that concrete path automatically so the safety gate is
-    // satisfied without making a first-run user open Settings. They can still
-    // change it there before applying anything.
-    if (!profileDir && profileCandidates.length) {
-      profileDir = profileCandidates[0].path;
-      if (!settingsProfileDirDraft) settingsProfileDirDraft = profileDir;
-      localStorage.setItem("ccm-profile-directory", profileDir);
-    }
+    // A saved choice must still be a real profile: a parent folder (for example
+    // Documents\StarCraft II) resolves to the profile in it; anything else is dropped.
     if (profileDir && !profileCandidates.some((profile) => profile.path === profileDir)) {
-      profileCandidates = [...profileCandidates, { path: profileDir, label: profileDir }];
+      await resolveProfile(profileDir).then(useProfile, () => {
+        profileDir = "";
+        localStorage.removeItem("ccm-profile-directory");
+      });
     }
+    // Detection is ranked by the backend (most recently played first). Select it
+    // automatically so a first-run player never has to open Sources.
+    if (!profileDir && profileCandidates.length) useProfile(profileCandidates[0]);
     if (showMessage) {
       message = profileCandidates.length ? `${profileCandidates.length} StarCraft II profile(s) found.` : "No StarCraft II profiles were found.";
       messageKind = profileCandidates.length ? "success" : "error";
@@ -407,12 +420,16 @@ const migrateLegacySnapshot = (campaignId: string) => runTask("Migrating legacy 
   return `Migrated ${result.filesCopied} legacy profile files for ${result.campaignId}.`;
 });
 
-async function openBattleNet() {
-  const opened = "Battle.net is opening. Press Play there to launch StarCraft II.";
-  await runTask("Opening Battle.net…", async () => {
-    await invoke("open_battle_net");
+/// Starts Battle.net if needed, then asks it to launch StarCraft II (the game only
+/// gets its login through Battle.net). The backend reports each step.
+async function playStarcraft() {
+  const opened = "StarCraft II is starting. Choose Campaign in the game's menu.";
+  await runTask("Starting StarCraft II…", async () => {
+    await invoke("launch_starcraft");
     return opened;
   });
+  installActivity = null;
+  render();
   // The hint only matters while the player switches windows.
   window.clearTimeout(battleNetMessageTimer);
   battleNetMessageTimer = window.setTimeout(() => {

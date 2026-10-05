@@ -57,7 +57,7 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
         <div><small>CAMPAIGN</small><strong>${escapeHtml(campaign.requirements.campaign)}</strong></div>
       </div>
       ${tags}
-      ${current ? `<section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${escapeHtml(current.title)}</strong><span>${escapeHtml(current.author)} · ${escapeHtml(current.version)}</span></div><button class="ghost open-battle-net" data-action="open-battle-net" ${context.busy ? "disabled" : ""}>Open Battle.net</button></section>` : ""}
+      ${current ? `<section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${escapeHtml(current.title)}</strong><span>${escapeHtml(current.author)} · ${escapeHtml(current.version)}</span></div></section>` : ""}
       ${renderInstallRow(campaign, context)}
     </div>`;
 }

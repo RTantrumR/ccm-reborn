@@ -59,6 +59,7 @@ nav { margin-top: var(--space-2); display: grid; gap: 2px; }
   border-top: 1px solid var(--divider);
 }
 .sidebar-footer small { color: var(--text-faint); font-size: var(--fs-label); letter-spacing: .1em; }
+.play-button { width: 100%; margin-top: var(--space-3); padding: 10px 12px; }
 .dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); }
 .dot.muted { background: var(--status-warn); }
 

@@ -178,3 +178,94 @@ mod detection_tests {
         assert!(documents.is_dir(), "{}", documents.display());
     }
 }
+
+/// "2-S2-2-1797368": region, game, realm, profile id.
+fn looks_like_profile_folder_name(name: &str) -> bool {
+    let parts: Vec<&str> = name.split('-').collect();
+    parts.len() == 4
+        && parts[1].eq_ignore_ascii_case("S2")
+        && [parts[0], parts[2], parts[3]].iter().all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()))
+}
+
+/// A real profile is `...\Accounts\<account id>\<region-S2-realm-id>`. The top-level
+/// `Documents\StarCraft II` also has Banks (offline/editor ones), so a Banks folder alone
+/// proves nothing.
+fn is_account_profile(path: &Path) -> bool {
+    let name_ok = path.file_name().and_then(|name| name.to_str()).is_some_and(looks_like_profile_folder_name);
+    let under_accounts = path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("Accounts"));
+    name_ok && under_accounts && path.is_dir()
+}
+
+/// Turns whatever folder the player picked into one exact profile: the folder itself
+/// when it is a profile, else the most recently played profile below it (Documents\
+/// StarCraft II, Accounts, or one account id). Searches at most three levels down.
+fn resolve_profile_folder(selected: &Path) -> Result<PathBuf, String> {
+    if is_account_profile(selected) {
+        return Ok(selected.to_path_buf());
+    }
+    let mut found = Vec::new();
+    let mut frontier = vec![selected.to_path_buf()];
+    for _ in 0..3 {
+        let mut next = Vec::new();
+        for directory in frontier {
+            for entry in fs::read_dir(&directory).into_iter().flatten().flatten() {
+                let path = entry.path();
+                if !entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
+                    continue;
+                }
+                if is_account_profile(&path) {
+                    found.push(path);
+                } else {
+                    next.push(path);
+                }
+            }
+        }
+        frontier = next;
+    }
+    found.sort_by(|left, right| profile_sort_key(right).cmp(&profile_sort_key(left)).then_with(|| left.cmp(right)));
+    found.into_iter().next().ok_or_else(|| {
+        "That isn't a StarCraft II account folder. Choose the StarCraft II folder in your Documents, and CCM Reborn finds your account in it.".into()
+    })
+}
+
+#[tauri::command]
+fn resolve_starcraft_profile(path: String) -> Result<StarcraftProfileCandidate, String> {
+    let profile = resolve_profile_folder(Path::new(path.trim()))?;
+    Ok(StarcraftProfileCandidate { label: profile_label(&profile), path: profile.display().to_string() })
+}
+
+#[cfg(test)]
+mod profile_folder_tests {
+    use super::*;
+
+    #[test]
+    fn a_picked_folder_resolves_to_one_real_profile() {
+        let documents = std::env::temp_dir().join(format!("ccm-sc2-pick-{}", Uuid::new_v4()));
+        let older = documents.join("Accounts/137997935/2-S2-1-6478056");
+        let newer = documents.join("Accounts/439835756/2-S2-2-1797368");
+        fs::create_dir_all(&older).unwrap();
+        fs::create_dir_all(newer.join("Banks")).unwrap();
+        fs::create_dir_all(documents.join("Banks")).unwrap(); // offline banks, not a profile
+        fs::write(older.join("CampaignProgress.xml"), "<a/>").unwrap();
+        fs::write(newer.join("CampaignProgress.xml"), "<b/>").unwrap();
+        // Ranking uses whole seconds, so make "older" clearly older.
+        let long_ago = UNIX_EPOCH + std::time::Duration::from_secs(1_000_000);
+        File::options().write(true).open(older.join("CampaignProgress.xml")).unwrap().set_modified(long_ago).unwrap();
+
+        let from_documents = resolve_profile_folder(&documents).unwrap();
+        let from_account = resolve_profile_folder(&documents.join("Accounts/137997935")).unwrap();
+        let exact = resolve_profile_folder(&newer).unwrap();
+        let elsewhere = resolve_profile_folder(&documents.join("Banks"));
+        fs::remove_dir_all(&documents).ok();
+
+        assert_eq!(from_documents, newer, "the most recently played profile wins");
+        assert_eq!(from_account, older);
+        assert_eq!(exact, newer);
+        assert!(elsewhere.is_err());
+        assert!(!looks_like_profile_folder_name("Hotkeys"));
+    }
+}
