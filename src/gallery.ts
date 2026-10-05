@@ -145,7 +145,12 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeZoom();
   else if (event.key === "ArrowLeft") step(zoomed, -1);
   else if (event.key === "ArrowRight") step(zoomed, 1);
-  else return;
+  else if (event.key === "Tab") {
+    // Focus stays on the viewer's buttons; behind it, Enter could pick another mod.
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>(".lightbox button")];
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    buttons[(at + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
+  } else return;
   event.preventDefault();
 });
 
