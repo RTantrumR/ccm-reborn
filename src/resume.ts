@@ -155,10 +155,6 @@ export function resumeSummary(resume: SavedCampaignResume | null) {
   return `Last played ${date} · checkpoint: ${missionLabel(save?.map ?? null)}`;
 }
 
-export function resumeInstruction(resume: SavedCampaignResume | null) {
-  if (!resume?.latestSave) {
-    return "Start a new campaign — there is no verified save for this mod yet.";
-  }
-  const save = resume.latestSave;
+export function resumeInstruction(save: NonNullable<SavedCampaignResume["latestSave"]>) {
   return `Load “${saveLabel(save.relativePath)}” in StarCraft II.`;
 }

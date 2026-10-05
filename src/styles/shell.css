@@ -43,7 +43,7 @@ nav { margin-top: var(--space-2); display: grid; gap: 2px; }
   font: 500 var(--fs-body) var(--font-body);
 }
 .nav-item span { width: 16px; color: inherit; text-align: center; }
-.nav-item strong { margin-left: auto; color: var(--text-faint); font-size: var(--fs-label); font-weight: 600; }
+.nav-item strong { margin-left: auto; color: var(--text-faint); font-size: var(--fs-meta); font-weight: 600; }
 .nav-item:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .nav-item.active, .nav-item.active:hover { color: var(--accent); background: var(--accent-tint); }
 .nav-item.active strong { color: var(--accent); }
@@ -55,10 +55,10 @@ nav { margin-top: var(--space-2); display: grid; gap: 2px; }
   margin-top: auto;
   padding: var(--space-3) var(--space-2) 0;
   color: var(--text-body);
-  font: 500 var(--fs-small) var(--font-body);
+  font: 500 var(--fs-body) var(--font-body);
   border-top: 1px solid var(--divider);
 }
-.sidebar-footer small { color: var(--text-faint); font-size: var(--fs-label); letter-spacing: .1em; }
+.sidebar-footer small { color: var(--text-faint); font-size: var(--fs-meta); letter-spacing: .1em; }
 .play-button { width: 100%; margin-top: var(--space-3); padding: 10px 12px; }
 .dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); }
 .dot.muted { background: var(--status-warn); }
@@ -90,7 +90,7 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
   border-left: 2px solid var(--status-warn);
   border-radius: var(--radius);
 }
-.game-banner p { flex: 1; margin: 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
+.game-banner p { flex: 1; margin: 0; color: var(--text-body); font: var(--fs-body)/1.5 var(--font-body); }
 .banner-close { padding: 0 8px; color: var(--text-muted); background: none; border: 0; border-radius: var(--radius); font-size: 22px; line-height: 1.3; }
 .banner-close:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .header-actions { display: flex; align-items: center; gap: var(--space-2); }
@@ -109,7 +109,7 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
   border: 1px solid var(--border-accent);
   border-left: 2px solid var(--accent);
   border-radius: var(--radius);
-  font: var(--fs-small)/1.5 var(--font-body);
+  font: var(--fs-body)/1.5 var(--font-body);
 }
 .status > span { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--text-hi); background: var(--accent-cta); font-size: var(--fs-meta); font-weight: 700; }
 .status p { margin: 0; }
@@ -123,12 +123,12 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 .status-copy { display: grid; flex: 1; min-width: 0; gap: var(--space-2); }
 .install-progress { display: grid; gap: 6px; }
 .install-progress > div:first-child { display: flex; justify-content: space-between; gap: var(--space-3); }
-.install-progress small { color: var(--text-faint); font-size: var(--fs-label); letter-spacing: .1em; }
-.install-progress strong { color: var(--text-hi); font: var(--fs-label) var(--font-mono); white-space: nowrap; }
+.install-progress small { color: var(--text-faint); font-size: var(--fs-meta); letter-spacing: .1em; }
+.install-progress strong { color: var(--text-hi); font: var(--fs-meta) var(--font-mono); white-space: nowrap; }
 .progress-track { height: 6px; overflow: hidden; border: 1px solid var(--border-muted); border-radius: var(--radius); background: var(--bg-inset); }
 .progress-track i { display: block; height: 100%; min-width: 8%; background: var(--accent); transition: width .18s ease; }
 .diagnostics-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); padding-top: 2px; }
-.diagnostics-actions code { color: var(--text-muted); font-size: var(--fs-label); overflow-wrap: anywhere; }
+.diagnostics-actions code { color: var(--text-muted); font-size: var(--fs-meta); overflow-wrap: anywhere; }
 
 /* Old-CCM snapshot migration banner: a real caveat, so warn-coloured. */
 .legacy-migration {
@@ -143,7 +143,7 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
   border-left: 2px solid var(--status-warn);
   border-radius: var(--radius);
 }
-.legacy-migration p { margin: 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
+.legacy-migration p { margin: 0; color: var(--text-body); font: var(--fs-body)/1.5 var(--font-body); }
 .legacy-migration strong { color: var(--status-warn); }
 .legacy-migration div { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: var(--space-2); }
 

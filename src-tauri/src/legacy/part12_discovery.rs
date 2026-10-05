@@ -471,6 +471,9 @@ pub fn run() {
             list_ccm_store,
             install_ccm_store_mod,
             launch_starcraft,
+            starcraft_status,
+            starcraft_is_running,
+            close_starcraft,
             resolve_starcraft_profile
         ])
         .run(tauri::generate_context!())

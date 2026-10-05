@@ -45,6 +45,12 @@
   --status-ok: #6cdb00;
   --status-warn: #ffb400;
   --status-danger: #f2735f;
+  --go-cta: #2b7a1c;                /* green buttons under white text (AA 5.4:1) */
+  --go-cta-hover: #338a22;
+  --go-deep: #1f5c14;
+  --stop-cta: #b23a2a;              /* red buttons under white text (AA 5.9:1) */
+  --stop-cta-hover: #c2412f;
+  --stop-deep: #8a2c20;
 
   /* Type */
   --font-display: "Archivo", "Noto Sans", "Segoe UI", sans-serif;
@@ -53,10 +59,8 @@
   --fs-page: 28px;                  /* page title */
   --fs-card: 20px;                  /* detail / dialog title */
   --fs-title: 15px;                 /* row and card titles */
-  --fs-body: 14px;
-  --fs-small: 13px;                 /* buttons, secondary copy */
-  --fs-meta: 12px;
-  --fs-label: 11px;                 /* uppercase captions; the smallest size */
+  --fs-body: 14px;                  /* anything read: copy, buttons, messages, warnings, hints */
+  --fs-meta: 12px;                  /* small stuff only (captions, versions, tags, counts); the floor */
 
   /* Space and shape */
   --space-1: 4px;

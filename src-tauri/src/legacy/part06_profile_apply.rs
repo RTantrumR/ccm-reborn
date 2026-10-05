@@ -341,6 +341,15 @@ fn push_profile_file_from_root(
 }
 
 fn inspect_save_details(path: &Path) -> Result<SaveDetails, String> {
+    let bytes = read_save_details_bytes(path)?;
+    Ok(SaveDetails {
+        maps: extract_archive_paths(&bytes, "Campaign/", ".SC2Map"),
+        mods: extract_archive_paths(&bytes, "Mods/", ".SC2Mod"),
+        campaigns: extract_archive_paths(&bytes, "Campaigns/", ".SC2Campaign"),
+    })
+}
+
+fn read_save_details_bytes(path: &Path) -> Result<Vec<u8>, String> {
     let mut archive = std::panic::catch_unwind(|| mpq::Archive::open(path))
         .map_err(|_| "MPQ reader rejected the archive.".to_string())?
         .map_err(|error| format!("MPQ reader error: {error}"))?;
@@ -356,11 +365,7 @@ fn inspect_save_details(path: &Path) -> Result<SaveDetails, String> {
         .read(&mut archive, &mut bytes)
         .map_err(|error| format!("save.details could not be decoded: {error}"))?;
     bytes.truncate(read);
-    Ok(SaveDetails {
-        maps: extract_archive_paths(&bytes, "Campaign/", ".SC2Map"),
-        mods: extract_archive_paths(&bytes, "Mods/", ".SC2Mod"),
-        campaigns: extract_archive_paths(&bytes, "Campaigns/", ".SC2Campaign"),
-    })
+    Ok(bytes)
 }
 
 fn extract_archive_paths(bytes: &[u8], marker: &str, suffix: &str) -> Vec<String> {

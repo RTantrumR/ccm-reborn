@@ -62,11 +62,13 @@ fn launch_starcraft_desktop(_reporter: &ProgressReporter) -> Result<(), String> 
 
 /// StarCraft II writes campaign banks and saves while it runs (and on exit), so
 /// switching a campaign under it can mix two campaigns' progress.
+const STARCRAFT_IMAGES: [&str; 2] = ["SC2_x64.exe", "SC2.exe"];
+
 #[cfg(all(target_os = "windows", not(test)))]
 fn starcraft_running() -> bool {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    ["SC2_x64.exe", "SC2.exe"].iter().any(|image| {
+    STARCRAFT_IMAGES.iter().any(|image| {
         Command::new("tasklist")
             .args(["/FI", &format!("IMAGENAME eq {image}"), "/NH"])
             .creation_flags(CREATE_NO_WINDOW)
@@ -86,6 +88,44 @@ fn refuse_while_starcraft_runs(root: &Path) -> Result<(), String> {
         return Err("StarCraft II is running. Close it completely, then switch again.".into());
     }
     Ok(())
+}
+
+/// The game's local client API (port 6119) lists the menu screens on show; a running
+/// map (a mission) shows none. `None` when the API doesn't answer.
+fn starcraft_in_mission() -> Option<bool> {
+    let client = reqwest::blocking::Client::builder()
+        .no_proxy()
+        .timeout(std::time::Duration::from_millis(1500))
+        .build()
+        .ok()?;
+    let body = client.get("http://127.0.0.1:6119/ui").send().ok()?.text().ok()?;
+    let ui: serde_json::Value = serde_json::from_str(&body).ok()?;
+    Some(ui.get("activeScreens")?.as_array()?.is_empty())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StarcraftStatus {
+    running: bool,
+    in_mission: Option<bool>,
+}
+
+#[tauri::command]
+async fn starcraft_status() -> Result<StarcraftStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let running = starcraft_running();
+        StarcraftStatus { running, in_mission: if running { starcraft_in_mission() } else { None } }
+    })
+    .await
+    .map_err(|error| format!("Status worker failed: {error}"))
+}
+
+/// Cheap check for the Play button, polled while the app is visible.
+#[tauri::command]
+async fn starcraft_is_running() -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(starcraft_running)
+        .await
+        .map_err(|error| format!("Status worker failed: {error}"))
 }
 
 #[tauri::command]

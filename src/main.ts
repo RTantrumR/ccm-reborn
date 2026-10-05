@@ -16,6 +16,7 @@ import { bindMyMods, myModsCampaign, refreshInstalledMods, renderMyMods, withCcm
 import { copyDiagnosticsMessage, InstallFailure, openInstallLogFolder, renderInstallStatus } from "./install-status";
 import { bindInstallConfirm, renderInstallConfirm, requestInstall, requestRestore } from "./install-flow";
 import { renderSettingsDialog } from "./render-settings-dialog";
+import { noteLaunched, playButtonLabel, starcraftLaunching, starcraftRunning, watchStarcraft } from "./starcraft-watch";
 import { bindLocalModEvents, localModDialog, localModsHeaderButton, mergeCatalog, refreshLocalMods } from "./local-mods";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -55,6 +56,7 @@ const installFlow = {
   gameDir: () => gameDir, profileDir: () => profileDir,
   campaign: (id: string) => catalog?.campaigns.find((item) => item.id === id) ?? myModsCampaign(id),
   activity: () => installActivity,
+  message: () => message,
   isCurrent: (campaign: Campaign) => isCurrentCatalogCampaign(campaign, inspection),
   setBusy: (value: boolean) => { busy = value; },
   setActivity: (value: InstallProgress | null) => { installActivity = value; },
@@ -62,6 +64,8 @@ const installFlow = {
   setFailure: (value: InstallFailure | null) => { lastInstallFailure = value; },
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
   inspectDirectory, render, restore: (targetPath: string) => restoreOriginals(targetPath),
+  play: () => playStarcraft(),
+  onStart: () => { scrollToInstallStatus = true; },
 };
 
 function render() {
@@ -79,7 +83,7 @@ function render() {
         <div class="dot ${gameDir ? "" : "muted"}"></div>
         <div><small>STARCRAFT II</small><br />${gameDir ? "Detected" : "Not found"}</div>
       </div>
-      ${gameDir ? `<button class="primary play-button" data-action="play-sc2" ${busy ? "disabled" : ""}>Play StarCraft II</button>` : ""}
+      ${gameDir ? `<button class="primary play-button" data-action="play-sc2" ${busy || starcraftRunning() || starcraftLaunching() ? "disabled" : ""}>${playButtonLabel()}</button>` : ""}
     </aside>
     <main>
       <header>
@@ -170,7 +174,7 @@ function bindEvents() {
   document.querySelectorAll<HTMLButtonElement>("[data-action='install']").forEach((button) => {
     button.addEventListener("click", () => requestInstall(installFlow, button.dataset.campaign ?? ""));
   });
-  bindInstallConfirm(installFlow, () => { scrollToInstallStatus = true; });
+  bindInstallConfirm(installFlow);
   bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
@@ -404,13 +408,14 @@ async function inspectDirectory() {
 }
 
 async function restoreOriginals(targetPath: string) {
-  if (!gameDir || !targetPath) return;
+  if (!gameDir || !targetPath) return false;
   await runTask("Restoring original campaign files…", async () => {
     const result = await invoke<RestoreResult>("restore_original_campaigns", { gameDir, profileDir: profileDir || null, targetPath });
     await inspectDirectory();
     if (result.conflicts.length) return [`Nothing was changed: ${result.conflicts.length} managed files were modified outside CCM Reborn.`, "error"];
     return result.restoredFiles ? `Original campaign files restored (${result.restoredFiles}).` : "Original campaigns are already active.";
   });
+  return messageKind === "success";
 }
 
 const migrateLegacySnapshot = (campaignId: string) => runTask("Migrating legacy CCM saves to the selected account…", async () => {
@@ -426,6 +431,7 @@ async function playStarcraft() {
   const opened = "StarCraft II is starting. Choose Campaign in the game's menu.";
   await runTask("Starting StarCraft II…", async () => {
     await invoke("launch_starcraft");
+    noteLaunched();
     return opened;
   });
   installActivity = null;
@@ -460,6 +466,7 @@ async function boot() {
 }
 
 render();
+watchStarcraft(() => busy);
 void listen<InstallProgress>("install-progress", ({ payload }) => {
   if (!busy) return;
   installActivity = payload;

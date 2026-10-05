@@ -28,7 +28,7 @@
 .campaign-copy { min-width: 0; }
 .campaign-copy h2 { margin: 0 0 var(--space-1); font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .campaign-copy p { margin: 0; color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
-.installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-label) var(--font-body); letter-spacing: .06em; }
+.installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .06em; }
 
 /* Sticky under the sticky header, so a pick far down the list visibly lands.
    Its own scroll only matters when the window is shorter than the pane;
@@ -36,7 +36,7 @@
 .campaign-detail { position: sticky; top: var(--header-h, 90px); max-height: calc(100vh - var(--header-h, 90px) - var(--space-4)); overflow-y: auto; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
 .detail-head { padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 2px solid var(--faction, var(--accent)); }
 .detail-head .eyebrow { color: var(--faction, var(--accent)); }
-.byline { margin: 6px 0 0; color: var(--text-body); font: 500 var(--fs-small) var(--font-body); }
+.byline { margin: 6px 0 0; color: var(--text-body); font: 500 var(--fs-body) var(--font-body); }
 .detail-body { padding: var(--space-4) var(--space-5) var(--space-5); }
 .title-row { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
 .title-row h2 { margin: var(--space-1) 0 0; font-size: var(--fs-page); letter-spacing: -.01em; }
@@ -44,22 +44,22 @@
 .description { max-width: 660px; margin: 0; color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; }
 .metadata { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin: 20px 0 var(--space-3); overflow: hidden; background: var(--divider); border: 1px solid var(--divider); border-radius: var(--radius); }
 .metadata div { padding: 10px var(--space-3); background: var(--bg-inset); }
-.metadata small { display: block; margin-bottom: var(--space-1); color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
-.metadata strong { color: var(--text-hi); font-size: var(--fs-small); font-weight: 600; }
+.metadata small { display: block; margin-bottom: var(--space-1); color: var(--text-faint); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .1em; }
+.metadata strong { color: var(--text-hi); font-size: var(--fs-body); font-weight: 600; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.tags span { padding: 3px var(--space-2); color: var(--text-muted); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-label) var(--font-body); }
+.tags span { padding: 3px var(--space-2); color: var(--text-muted); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-meta) var(--font-body); }
 
 .current-campaign { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: 20px; padding: var(--space-3); background: var(--bg-inset); border: 1px solid var(--border-accent); border-radius: var(--radius); }
 .current-campaign div { display: grid; gap: 3px; min-width: 0; }
-.current-campaign small { color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
-.current-campaign strong { color: var(--text-hi); font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.current-campaign small { color: var(--text-faint); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .1em; }
+.current-campaign strong { color: var(--text-hi); font-size: var(--fs-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .current-campaign span { color: var(--text-body); font: var(--fs-meta) var(--font-body); }
 .install-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-5); }
 .current-campaign + .install-row { margin-top: 14px; }
 .install { min-width: 145px; }
 .safety-note { margin: var(--space-4) 0 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
 
-.empty-list { padding: 20px; color: var(--text-body); border: 1px dashed var(--border-muted); border-radius: var(--radius); font-size: var(--fs-small); }
+.empty-list { padding: 20px; color: var(--text-body); border: 1px dashed var(--border-muted); border-radius: var(--radius); font-size: var(--fs-body); }
 .empty-detail { min-height: 420px; display: grid; justify-items: center; align-content: center; padding: 40px; text-align: center; }
 .empty-detail h2 { margin: 18px 0 var(--space-2); font-size: var(--fs-card); }
 .empty-detail p { max-width: 430px; color: var(--text-body); line-height: 1.6; }

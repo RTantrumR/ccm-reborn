@@ -21,6 +21,7 @@ include!("legacy/part18_installed_mods.rs");
 include!("legacy/part19_ccm_store.rs");
 include!("legacy/part20_detection.rs");
 include!("legacy/part21_launch.rs");
+include!("legacy/part22_mission_save.rs");
 
 #[cfg(test)]
 mod tests_a {

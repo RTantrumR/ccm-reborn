@@ -50,7 +50,7 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
         ${current ? `<span class="slot-state ${current.isModified ? "custom" : "original"}">${current.isModified ? "Custom" : "Original"}</span>` : ""}
       </header>
       <section class="current-install">
-        <div class="current-campaign-copy"><small>PLAYING NOW</small><strong>${escapeHtml(currentTitle)}</strong>${currentMeta ? `<span>${escapeHtml(currentMeta)}</span>` : ""}${managed ? `<div class="resume-instruction"><strong>${activeResume?.latestSave ? `Continue from ${escapeHtml(resumeCheckpoint(activeResume) ?? "your last save")}` : "Ready to start"}</strong><span>${escapeHtml(resumeInstruction(activeResume))}</span></div>` : ""}</div>
+        <div class="current-campaign-copy"><small>PLAYING NOW</small><strong>${escapeHtml(currentTitle)}</strong>${currentMeta ? `<span>${escapeHtml(currentMeta)}</span>` : ""}${activeResume?.latestSave ? `<div class="resume-instruction"><strong>Continue from ${escapeHtml(resumeCheckpoint(activeResume) ?? "your last save")}</strong><span>${escapeHtml(resumeInstruction(activeResume.latestSave))}</span></div>` : ""}</div>
       </section>
       <section class="alternatives">
         <div class="alternative-heading"><small>MODS</small>${options.length > PREVIEW_COUNT ? `<button class="see-all" data-page="library" data-library-filter="${slot.id}">See all</button>` : ""}</div>
