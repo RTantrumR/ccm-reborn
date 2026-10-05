@@ -318,7 +318,15 @@ fn force_restore(root: &Path, state: &ManagedState) -> Result<(), String> {
             continue;
         }
         let destination = safe_game_path(root, &safe_relative_path(&file.destination)?)?;
-        if file.original_existed {
+        // An adopted slot goes back to Blizzard's campaign (empty), as the original
+        // CCM's Restore does; Mods/ dependencies still get their previous version.
+        let adopted_slot_file = state.adopted_from.is_some()
+            && dependency_root_from_destination(Path::new(&file.destination)).is_none();
+        if file.original_existed && adopted_slot_file {
+            if destination.is_file() {
+                fs::remove_file(&destination).map_err(io_error)?;
+            }
+        } else if file.original_existed {
             let backup_path = file
                 .backup_path
                 .as_deref()

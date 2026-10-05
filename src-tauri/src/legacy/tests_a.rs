@@ -247,7 +247,7 @@
             version: String::new(), target_path: "Maps/Campaign".into(), installed_at: 0,
             backup_dir: "backups/test".into(),
             cleared_directories: vec!["Maps/Campaign".into(), "Maps/Campaign/swarm".into()],
-            files: Vec::new(),
+            files: Vec::new(), adopted_from: None,
         };
         assert!(validate_managed_state(&state).is_err());
     }
@@ -258,6 +258,7 @@
             format: 1, campaign_id: "malformed".into(), title: "Malformed".into(), author: String::new(),
             version: String::new(), target_path: "Maps/Campaign".into(), installed_at: 0,
             backup_dir: "../../outside".into(), cleared_directories: vec!["Maps/Campaign".into()], files: Vec::new(),
+            adopted_from: None,
         };
         assert!(validate_managed_state(&state).is_err());
     }
@@ -382,7 +383,7 @@
         assert_eq!(restore_existing_campaign(&game_dir, &package.target_path).unwrap().conflicts, Vec::<String>::new());
         let staged = extract_ccm_package(&v2, &package, &staging.join("new-package")).unwrap();
         let new_request = request(&v2, "1.1");
-        let new_state = backup_campaign_directory(&game_dir, &new_request, &package.target_path, &staged).unwrap();
+        let new_state = backup_campaign_directory(&game_dir, &new_request, &package.target_path, &staged, None).unwrap();
         clear_directory(&game_dir.join(&package.target_path)).unwrap();
         for file in &staged {
             copy_file(&file.path, &game_dir.join(&file.destination)).unwrap();

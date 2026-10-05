@@ -36,6 +36,8 @@ fn install_archive(
         ensure_shared_dependency_baselines(root, &dependency_roots_from_staged(&staged_files))?;
         let previous_install = snapshot_previous_install(root, &staging, &package.target_path)?;
         let previous_state = read_state_for_target(root, &package.target_path)?;
+        // An unmanaged slot may hold a mod from the original CCM's store; its saves belong to that mod.
+        let adopted_from = previous_state.is_none().then(|| adopted_ccm_store_mod(root, &package.target_path)).flatten();
         let source_target = previous_state
             .as_ref()
             .map(ManagedState::target_path_or_first_clear)
@@ -43,6 +45,7 @@ fn install_archive(
         let source_campaign_id = previous_state
             .as_ref()
             .map(|state| state.campaign_id.clone())
+            .or_else(|| adopted_from.clone())
             .unwrap_or_default();
         let source_dependencies = previous_state
             .as_ref()
@@ -109,7 +112,7 @@ fn install_archive(
             }
             return Err("The active campaign has files changed outside CCM Reborn. Restore it manually before updating.".into());
         }
-        let state = match backup_campaign_directory(root, request, &package.target_path, &staged_files) {
+        let state = match backup_campaign_directory(root, request, &package.target_path, &staged_files, adopted_from.clone()) {
             Ok(state) => state,
             Err(error) => {
                 if rollback_before_new_state(root, previous_install.as_ref(), &profile_transaction).is_ok() {
@@ -335,15 +338,6 @@ fn refuse_nested_wol_package(target: &str, files: &[PackageFilePlan]) -> Result<
     Ok(())
 }
 
-fn dependency_roots_from_planned_files(files: &[PackageFilePlan]) -> Vec<PathBuf> {
-    files
-        .iter()
-        .filter_map(|file| dependency_root_from_destination(Path::new(&file.destination)))
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect()
-}
-
 fn read_ccm_package(archive_path: &Path) -> Result<CcmPackage, String> {
     let file = File::open(archive_path).map_err(io_error)?;
     let mut archive = ZipArchive::new(file).map_err(zip_error)?;
@@ -438,6 +432,7 @@ fn backup_campaign_directory(
     request: &InstallRequest,
     target_path: &str,
     staged_files: &[StagedFile],
+    adopted_from: Option<String>,
 ) -> Result<ManagedState, String> {
     let backup_dir = format!("backups/{}-{}", request.campaign_id, Uuid::new_v4());
     let backup_root = manager_root(root).join(&backup_dir);
@@ -494,5 +489,6 @@ fn backup_campaign_directory(
         backup_dir,
         cleared_directories: campaign_roots.into_iter().map(|root| path_string(&root)).collect(),
         files,
+        adopted_from,
     })
 }

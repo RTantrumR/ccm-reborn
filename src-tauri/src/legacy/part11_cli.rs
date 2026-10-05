@@ -304,6 +304,15 @@ fn dependency_root_from_destination(destination: &Path) -> Option<PathBuf> {
     Some(root)
 }
 
+fn dependency_roots_from_planned_files(files: &[PackageFilePlan]) -> Vec<PathBuf> {
+    files
+        .iter()
+        .filter_map(|file| dependency_root_from_destination(Path::new(&file.destination)))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect()
+}
+
 fn dependency_roots_from_staged(staged_files: &[StagedFile]) -> Vec<PathBuf> {
     staged_files
         .iter()

@@ -215,6 +215,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
     let _operation_lock = acquire_operation_lock(&root)?;
     recover_interrupted_install(&root)?;
     let target = path_string(&safe_campaign_target(&target_path)?);
+    adopt_ccm_slot_in_place(&root, &target)?;
     let Some(state) = read_state_for_target(&root, &target)? else {
         return Ok(RestoreResult {
             restored_files: 0,

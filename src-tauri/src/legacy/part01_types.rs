@@ -144,6 +144,12 @@ struct ManagedState {
     #[serde(default)]
     cleared_directories: Vec<String>,
     files: Vec<ManagedFile>,
+    /// Set when this install took over a slot that held a mod from the original
+    /// CCM's store (`ccm-<slug>`). The slot's previous files stay backed up for
+    /// rollback, but Restore leaves the slot empty: Blizzard's campaign. The
+    /// adopted mod is still in the original CCM's folder.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    adopted_from: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

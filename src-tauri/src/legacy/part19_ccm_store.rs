@@ -144,6 +144,67 @@ fn pack_ccm_store_mod(root: &Path, store_mod: &CcmStoreMod, destination: &Path) 
     Ok((sha256_file(destination)?, fs::metadata(destination).map_err(io_error)?.len()))
 }
 
+/// The store mod a slot currently holds, if the slot's metadata.txt matches one
+/// (same campaign, title and version), i.e. it was activated by the original CCM.
+fn adopted_ccm_store_mod(root: &Path, target_path: &str) -> Option<String> {
+    let bytes = fs::read(root.join(target_path).join("metadata.txt")).ok()?;
+    let metadata = decode_ccm_metadata(&bytes).ok()?;
+    if campaign_target_from_metadata(&metadata).ok()? != target_path {
+        return None;
+    }
+    let title = metadata_field(&metadata, "title")?;
+    let version = metadata_field(&metadata, "version").unwrap_or_default();
+    list_ccm_store_at(root)
+        .into_iter()
+        .find(|store_mod| store_mod.target_path == target_path && store_mod.title == title && store_mod.version == version)
+        .map(|store_mod| store_mod.id)
+}
+
+/// "Original <campaign>" on a slot the original CCM filled and CCM Reborn never
+/// managed: record the slot's current files as that store mod's (exact hashes, no
+/// copies) so the regular Restore can switch its saves away and empty the slot.
+/// Returns false when the slot holds nothing recognisable from the store.
+fn adopt_ccm_slot_in_place(root: &Path, target_path: &str) -> Result<bool, String> {
+    if read_state_for_target(root, target_path)?.is_some() {
+        return Ok(false);
+    }
+    let Some(id) = adopted_ccm_store_mod(root, target_path) else {
+        return Ok(false);
+    };
+    let store_mod = list_ccm_store_at(root)
+        .into_iter()
+        .find(|store_mod| store_mod.id == id)
+        .ok_or("The original CCM's mod disappeared while reading it.")?;
+    let mut files = Vec::new();
+    for file in collect_campaign_target_files(root, target_path)? {
+        let relative = file.strip_prefix(root).map_err(|_| "Campaign file escaped the game folder.")?;
+        files.push(ManagedFile {
+            destination: path_string(relative),
+            original_existed: false,
+            backup_path: None,
+            installed_sha256: Some(sha256_file(&file)?),
+        });
+    }
+    let backup_dir = format!("backups/{id}-{}", Uuid::new_v4());
+    fs::create_dir_all(manager_root(root).join(&backup_dir)).map_err(io_error)?;
+    let state = ManagedState {
+        format: 1,
+        campaign_id: id.clone(),
+        title: store_mod.title,
+        author: store_mod.author,
+        version: store_mod.version,
+        target_path: target_path.to_string(),
+        installed_at: unix_timestamp(),
+        backup_dir,
+        cleared_directories: vec![target_path.to_string()],
+        files,
+        adopted_from: Some(id),
+    };
+    validate_managed_state(&state)?;
+    write_state_for_target(root, &state)?;
+    Ok(true)
+}
+
 #[tauri::command]
 async fn list_ccm_store(game_dir: String) -> Result<Vec<CcmStoreMod>, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -262,6 +323,108 @@ mod ccm_store_tests {
         }
         fs::remove_dir_all(&temporary).ok();
         assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// A game folder where the original CCM activated `KHGR` in the HotS slot,
+    /// plus a new package to install over it.
+    fn ccm_activated_game(slot_metadata: &str) -> (PathBuf, PathBuf) {
+        let root = store_with(&[
+            ("KHGR/metadata.txt", "title=Kerrigan Rogue\ncampaign=HotS\nversion=1.45.0\n"),
+            ("KHGR/zchar01.SC2Map", "ccm mission"),
+        ]);
+        let slot = root.join("Maps/Campaign/swarm");
+        fs::create_dir_all(&slot).unwrap();
+        fs::write(slot.join("metadata.txt"), slot_metadata).unwrap();
+        fs::write(slot.join("zchar01.SC2Map"), "ccm mission").unwrap();
+        fs::write(slot.join("zchar02.SC2Map"), "ccm mission 2").unwrap();
+        fs::create_dir_all(root.join("Mods")).unwrap();
+        fs::write(root.join("Mods/Shared.SC2Mod"), "ccm dependency").unwrap();
+
+        let archive = root.join("new.zip");
+        let mut writer = zip::ZipWriter::new(File::create(&archive).unwrap());
+        let options = zip::write::SimpleFileOptions::default();
+        for (name, contents) in [
+            ("New/metadata.txt", "title=New Mod\ncampaign=HotS\nversion=2\n"),
+            ("New/zchar01.SC2Map", "new mission"),
+            ("New/Shared.SC2Mod", "new dependency"),
+        ] {
+            writer.start_file(name, options).unwrap();
+            writer.write_all(contents.as_bytes()).unwrap();
+        }
+        writer.finish().unwrap();
+        (root, archive)
+    }
+
+    fn install_new(root: &Path, archive: &Path) -> ManagedState {
+        let request = InstallRequest {
+            campaign_id: "new-mod".into(), title: "New Mod".into(), author: String::new(), version: "2".into(),
+            profile_dir: None, archive_source: path_string(archive), sha256: sha256_file(archive).unwrap(),
+            package_size: None, game_dir: path_string(root),
+        };
+        install_archive(root, &request, archive, &request.sha256, None).unwrap();
+        read_state_for_target(root, "Maps/Campaign/swarm").unwrap().unwrap()
+    }
+
+    #[test]
+    fn taking_over_a_ccm_activated_slot_restores_to_blizzards_campaign() {
+        let (root, archive) = ccm_activated_game("title=Kerrigan Rogue\ncampaign=HotS\nversion=1.45.0\n");
+        assert_eq!(adopted_ccm_store_mod(&root, "Maps/Campaign/swarm").as_deref(), Some("ccm-khgr"));
+        let state = install_new(&root, &archive);
+        assert_eq!(state.adopted_from.as_deref(), Some("ccm-khgr"));
+
+        restore_original_campaigns_blocking(path_string(&root), None, "Maps/Campaign/swarm".into()).unwrap();
+        let slot = root.join("Maps/Campaign/swarm");
+        let left: Vec<_> = fs::read_dir(&slot).unwrap().flatten().map(|entry| entry.file_name()).collect();
+        let dependency = fs::read_to_string(root.join("Mods/Shared.SC2Mod")).unwrap();
+        let store_kept = root.join(CCM_STORE_DIRECTORY).join("KHGR/zchar01.SC2Map").is_file();
+        fs::remove_dir_all(&root).ok();
+
+        assert!(left.is_empty(), "slot should be empty (Blizzard's campaign), found {left:?}");
+        assert_eq!(dependency, "ccm dependency", "Mods/ dependencies still get their previous version back");
+        assert!(store_kept, "the original CCM's store is never touched");
+    }
+
+    #[test]
+    fn original_on_a_slot_ccm_reborn_never_managed_empties_it() {
+        let (root, _archive) = ccm_activated_game("title=Kerrigan Rogue\ncampaign=HotS\nversion=1.45.0\n");
+        let restored = restore_original_campaigns_blocking(path_string(&root), None, "Maps/Campaign/swarm".into()).unwrap();
+        let left: Vec<_> = fs::read_dir(root.join("Maps/Campaign/swarm")).unwrap().flatten().map(|entry| entry.file_name()).collect();
+        let state_left = read_state_for_target(&root, "Maps/Campaign/swarm").unwrap().is_some();
+        let store_kept = root.join(CCM_STORE_DIRECTORY).join("KHGR/zchar01.SC2Map").is_file();
+        let dependency = fs::read_to_string(root.join("Mods/Shared.SC2Mod")).unwrap();
+        fs::remove_dir_all(&root).ok();
+
+        assert!(restored.conflicts.is_empty());
+        assert!(left.is_empty(), "slot should be empty, found {left:?}");
+        assert!(!state_left);
+        assert!(store_kept);
+        assert_eq!(dependency, "ccm dependency", "the old CCM's Mods/ dependency is left alone");
+    }
+
+    #[test]
+    fn original_does_nothing_to_an_unrecognised_unmanaged_slot() {
+        let (root, _archive) = ccm_activated_game("title=Something Else\ncampaign=HotS\nversion=1\n");
+        let restored = restore_original_campaigns_blocking(path_string(&root), None, "Maps/Campaign/swarm".into()).unwrap();
+        let mission = fs::read_to_string(root.join("Maps/Campaign/swarm/zchar02.SC2Map")).ok();
+        fs::remove_dir_all(&root).ok();
+        assert_eq!(restored.restored_files, 0);
+        assert_eq!(mission.as_deref(), Some("ccm mission 2"));
+    }
+
+    #[test]
+    fn unrecognised_slot_content_is_still_restored_exactly() {
+        // Not in the store (version differs), so it can't be recovered from there:
+        // keep today's behaviour and bring it back.
+        let (root, archive) = ccm_activated_game("title=Kerrigan Rogue\ncampaign=HotS\nversion=0.9\n");
+        assert_eq!(adopted_ccm_store_mod(&root, "Maps/Campaign/swarm"), None);
+        let state = install_new(&root, &archive);
+        assert_eq!(state.adopted_from, None);
+
+        restore_original_campaigns_blocking(path_string(&root), None, "Maps/Campaign/swarm".into()).unwrap();
+        let slot = root.join("Maps/Campaign/swarm");
+        let mission = fs::read_to_string(slot.join("zchar02.SC2Map")).ok();
+        fs::remove_dir_all(&root).ok();
+        assert_eq!(mission.as_deref(), Some("ccm mission 2"));
     }
 
     #[test]
