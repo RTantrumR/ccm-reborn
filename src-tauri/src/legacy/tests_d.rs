@@ -208,12 +208,22 @@ fn mega_links_yield_the_file_key() {
 
 #[test]
 fn drive_links_and_confirm_page() {
-    assert_eq!(drive_file_id("https://drive.google.com/file/d/1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t/view?usp=sharing").as_deref(), Some("1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t"));
-    assert_eq!(drive_file_id("https://drive.google.com/open?id=abc_D-1").as_deref(), Some("abc_D-1"));
-    assert_eq!(drive_file_id("https://drive.google.com/drive/folders/xyz"), None);
-    assert_eq!(drive_file_id("https://docs.google.com/document/d/zz/edit"), None);
+    let file = |link: &str| drive_file(link).map(|(id, key)| (id, key.unwrap_or_default()));
+    let pair = |id: &str, key: &str| Some((id.to_string(), key.to_string()));
+    assert_eq!(file("https://drive.google.com/file/d/1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t/view?usp=sharing"), pair("1JAjdXx-SsKskXY0G-BqZeY4ZItccq32t", ""));
+    assert_eq!(file("https://drive.google.com/open?id=abc_D-1"), pair("abc_D-1", ""));
+    // Files shared before 2021 carry a resource key in the link.
+    assert_eq!(file("https://drive.google.com/file/d/0B9x/view?usp=sharing&resourcekey=0-AbC_d-9"), pair("0B9x", "0-AbC_d-9"));
+    assert_eq!(file("https://drive.google.com/open?id=0B9x&resourcekey=0-k"), pair("0B9x", "0-k"));
+    assert_eq!(file("https://drive.google.com/file/d/0B9x/view?resourcekey=bad%20key"), pair("0B9x", ""));
+    assert_eq!(file("https://drive.google.com/drive/folders/xyz"), None);
+    assert_eq!(file("https://docs.google.com/document/d/zz/edit"), None);
     // Shape of Drive's virus-scan page (2026-10-05).
     let page = r#"<form id="download-form" action="https://drive.usercontent.google.com/download" method="get"><input type="hidden" name="id" value="1JAj"><input type="hidden" name="export" value="download"><input type="hidden" name="confirm" value="t"><input type="hidden" name="uuid" value="7248a322"></form>"#;
     assert_eq!(drive_confirm_fields(page), [("id", "1JAj"), ("export", "download"), ("confirm", "t"), ("uuid", "7248a322")]
+        .map(|(name, value)| (name.to_string(), value.to_string())));
+    // The same fields in another attribute order and quoting; visible inputs are skipped.
+    let reordered = r#"<input class="x" value="1JAj" name="id" type="hidden"/><input name='confirm' type='HIDDEN' value='a&amp;b'><input type="submit" name="go" value="Download">"#;
+    assert_eq!(drive_confirm_fields(reordered), [("id", "1JAj"), ("confirm", "a&b")]
         .map(|(name, value)| (name.to_string(), value.to_string())));
 }
