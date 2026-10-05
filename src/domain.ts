@@ -19,8 +19,11 @@ export const formatBytes = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 1024 ? 1 : 0)} MB`;
 
-/// "v1.2", or nothing for a mod without a version.
-export const versionTag = (version: string | null | undefined) => (version?.trim() ? `v${version.trim()}` : "");
+/// "v1.2", "Alpha 0" as it is, or nothing for a mod without a version.
+export function versionTag(version: string | null | undefined) {
+  const value = version?.trim() ?? "";
+  return /^\d/.test(value) ? `v${value}` : value;
+}
 /// The parts that exist, joined with " · " (author, version, size…).
 export const byline = (...parts: string[]) => parts.filter(Boolean).join(" · ");
 

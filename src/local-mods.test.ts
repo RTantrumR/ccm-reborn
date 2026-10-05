@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergeCatalog } from "./local-mods";
 import { renderAddLocalDialog } from "./render-add-local-dialog";
-import { campaignSlot, findCampaign } from "./domain";
+import { campaignSlot, findCampaign, versionTag } from "./domain";
 import { sortCampaignsByRecentPlay } from "./resume";
 import type { Catalog, LocalModEntry, SavedCampaignResume } from "./types";
 
@@ -191,5 +191,11 @@ describe("findCampaign", () => {
     const archived = { ...library, id: "archive-x" };
     expect(findCampaign("archive-x", [], [archived])?.id).toBe("archive-x");
     expect(findCampaign("zerus-rising", [kept("c".repeat(64))], [])?.isLocal).toBe(true);
+  });
+});
+
+describe("versionTag", () => {
+  it("puts v only before a number", () => {
+    expect([versionTag("1.3.6"), versionTag("Alpha 0"), versionTag(""), versionTag(null)]).toEqual(["v1.3.6", "Alpha 0", "", ""]);
   });
 });
