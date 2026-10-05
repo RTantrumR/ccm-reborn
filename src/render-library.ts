@@ -130,7 +130,7 @@ export function renderLibrary(context: LibraryContext) {
     ? campaigns.map((campaign) => renderCard(campaign, selected, context)).join("")
     : '<div class="empty-list">No campaigns in this catalog yet.</div>';
   const detail = selected
-    ? `<article class="campaign-detail faction-${campaignSlot(selected.requirements.campaign)}">${renderLibraryDetail(selected, context)}</article>`
+    ? `<article class="campaign-detail faction-${campaignSlot(selected.requirements.campaign)}" data-campaign="${escapeHtml(selected.id)}">${renderLibraryDetail(selected, context)}</article>`
     : '<article class="campaign-detail"><div class="empty-detail"><div class="empty-orb">◇</div><h2>Library is empty.</h2></div></article>';
   return `<section class="workspace library-workspace"><div class="library-column">${renderFilters(context.filter)}<div class="campaign-list">${list}</div></div>${detail}</section>`;
 }
@@ -150,3 +150,16 @@ export function fitLibraryDetail() {
 }
 
 window.addEventListener("resize", fitLibraryDetail);
+
+/** render() rebuilds the page, which would put the card back at its top (on every install
+    progress update, or on coming back from a link). Call before; run the result after
+    fitLibraryDetail, once the card can scroll again. Another mod starts at the top. */
+export function keepLibraryScroll() {
+  const before = document.querySelector<HTMLElement>(".campaign-detail");
+  const id = before?.dataset.campaign;
+  const top = before?.scrollTop ?? 0;
+  return () => {
+    const after = document.querySelector<HTMLElement>(".campaign-detail");
+    if (after && id && after.dataset.campaign === id) after.scrollTop = top;
+  };
+}

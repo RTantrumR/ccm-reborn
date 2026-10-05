@@ -6,7 +6,7 @@ import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
-import { fitLibraryDetail, renderLibrary } from "./render-library";
+import { fitLibraryDetail, keepLibraryScroll, renderLibrary } from "./render-library";
 import { findCampaign, installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
@@ -72,6 +72,7 @@ const installFlow = {
 };
 
 function render() {
+  const restoreLibraryScroll = keepLibraryScroll();
   root.innerHTML = `
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">C</span><span>CCM <b>REBORN</b></span></div>
@@ -111,6 +112,7 @@ function render() {
     ${localModDialog()}
   `;
   bindEvents();
+  restoreLibraryScroll();
   const addLocalDialog = document.querySelector<HTMLDialogElement>("#add-local-mod-dialog");
   if (addLocalDialog && !addLocalDialog.open) addLocalDialog.showModal();
   const settingsDialog = document.querySelector<HTMLDialogElement>("#settings-dialog");
