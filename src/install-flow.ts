@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { formatBytes } from "./domain";
+import { formatBytes, versionTag } from "./domain";
 import type { InstallAction } from "./domain";
 import type { Campaign, InstallProgress, InstallResult } from "./types";
 import type { InstallFailure } from "./install-status";
@@ -194,7 +194,9 @@ async function closeAndRun(flow: InstallFlow, keepMission: boolean) {
 function heading(flow: InstallFlow, pending: Pending) {
   if (pending.kind === "restore") return `Original ${escapeHtml(BASE_CAMPAIGNS[pending.targetPath] ?? "campaign")}`;
   const campaign = flow.campaign(pending.id);
-  return campaign ? `${escapeHtml(campaign.title)} <span class="dialog-version">v${escapeHtml(campaign.version)}</span>` : "";
+  if (!campaign) return "";
+  const version = versionTag(campaign.version);
+  return `${escapeHtml(campaign.title)}${version ? ` <span class="dialog-version">${escapeHtml(version)}</span>` : ""}`;
 }
 
 function progressBar(activity: InstallProgress | null) {
@@ -335,7 +337,7 @@ async function installCampaign(flow: InstallFlow, campaignId: string) {
       // Installed in place from the original CCM's folder.
       ? await invoke<InstallResult>("install_ccm_store_mod", { gameDir, profileDir, id: campaign.id })
       : await invoke<InstallResult>("install_campaign", { request: requestFor(campaign, gameDir, profileDir) });
-    flow.setMessage(`Installed ${result.title} v${result.version}. Press Play StarCraft II to start.`, "success");
+    flow.setMessage(`Installed ${[result.title, versionTag(result.version)].filter(Boolean).join(" ")}. Press Play StarCraft II to start.`, "success");
     flow.setActivity(null); flow.setCampaignId("");
     await flow.inspectDirectory();
     return true;

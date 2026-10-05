@@ -39,7 +39,7 @@ function localCampaign(mod: LocalModEntry): Campaign {
     id: mod.id,
     title: mod.title,
     author: mod.author || "Unknown author",
-    version: mod.version || "unversioned",
+    version: mod.version,
     description: mod.description
       || "You added this mod from your computer. CCM Reborn keeps its own copy of the archive.",
     tags: [],

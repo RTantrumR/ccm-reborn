@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Campaign, Catalog, Inspection } from "./types";
-import { campaignSlot } from "./domain";
+import { byline, campaignSlot, versionTag } from "./domain";
 
 /// Mirrors InstalledModRecord in part18_installed_mods.rs.
 export type InstalledModRecord = {
@@ -140,7 +140,7 @@ function playingIn(slot: typeof SLOTS[number], entries: Entry[], context: MyMods
   return { id: (matches.find((entry) => entry.isCcm) ?? matches[0])?.id ?? "", modified: true };
 }
 
-const versioned = (title: string, version: string) => [title, version ? `v${version}` : ""].filter(Boolean).join(" · ");
+const versioned = (title: string, version: string) => byline(title, versionTag(version));
 
 function renderCurrent(slot: typeof SLOTS[number], playing: { id: string; modified: boolean }, entries: Entry[], context: MyModsContext) {
   const entry = entries.find((item) => item.id === playing.id);

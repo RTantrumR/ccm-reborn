@@ -1,5 +1,5 @@
 import type { Campaign, Catalog, Inspection, SavedCampaignResume } from "./types";
-import { campaignSlot, formatBytes, isCommunityCampaign } from "./domain";
+import { byline, campaignSlot, formatBytes, isCommunityCampaign, versionTag } from "./domain";
 import { resumeCheckpoint, resumeFor, resumeInstruction, resumeSummary, sortCampaignsByRecentPlay } from "./resume";
 // The game's own emblems, extracted from StarCraft II: the expansion icons, and the
 // Nova Covert Ops decal (NCO has no expansion icon).
@@ -44,7 +44,7 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
   );
   // An unmodified slot is Blizzard's campaign; say so instead of the backend's "untracked" wording.
   const currentTitle = !current ? "Unknown" : current.isModified ? current.title : `Original ${slot.title}`;
-  const currentMeta = !current ? "" : current.isModified ? `Version ${current.version}` : "Blizzard";
+  const currentMeta = !current ? "" : current.isModified ? (current.version.trim() ? `Version ${current.version.trim()}` : "") : "Blizzard";
   const managed = context.inspection?.managedCampaigns.find((campaign) => campaign.slot === slot.id);
   const activeResume = managed ? resumeFor(context.savedResumes, managed.id) : null;
 
@@ -69,7 +69,7 @@ function renderPreview(campaign: Campaign, slotId: string, context: DashboardCon
   const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
   return `
     <article class="install-option">
-      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(campaign.author)} · v${escapeHtml(campaign.version)} · ${formatBytes(campaign.package.size)}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
+      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(byline(campaign.author, versionTag(campaign.version), formatBytes(campaign.package.size)))}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
       <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }

@@ -1,5 +1,5 @@
 import type { Campaign, Catalog, CurrentCampaign, Inspection } from "./types";
-import { campaignSlot, formatBytes, installAction, isCommunityCampaign } from "./domain";
+import { byline, campaignSlot, formatBytes, installAction, isCommunityCampaign, versionTag } from "./domain";
 import { renderGallery } from "./gallery";
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
@@ -79,7 +79,7 @@ function renderInstallRow(campaign: Campaign, context: LibraryContext) {
     : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
     : context.busy ? "disabled" : "";
   const action = installAction(campaign, context.inspection);
-  const label = action === "reinstall" ? "Reinstall" : `${action === "update" ? "Update to" : "Install"} v${escapeHtml(campaign.version)}`;
+  const label = action === "reinstall" ? "Reinstall" : `${action === "update" ? "Update to" : "Install"} ${escapeHtml(versionTag(campaign.version))}`.trim();
   const button = `<button class="${action === "reinstall" ? "ghost" : "primary install"}" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : label}</button>`;
   const docs = campaign.link?.docs ? `<button class="ghost" data-action="open-link" data-url="${escapeHtml(campaign.link.docs)}">Patch notes</button>` : "";
   return `<div class="install-row">${button}${docs}</div>`;
@@ -93,7 +93,7 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
     ${renderGallery(campaign)}
     <div class="detail-head">
       <p class="eyebrow">${escapeHtml(campaign.requirements.campaign)}</p>
-      <div class="title-row"><h2>${escapeHtml(campaign.title)}</h2>${campaign.version ? `<span class="version">v${escapeHtml(campaign.version)}</span>` : ""}</div>
+      <div class="title-row"><h2>${escapeHtml(campaign.title)}</h2>${versionTag(campaign.version) ? `<span class="version">${escapeHtml(versionTag(campaign.version))}</span>` : ""}</div>
       <p class="byline">${escapeHtml(campaign.author)}</p>
       ${renderInstallRow(campaign, context)}
     </div>
@@ -104,14 +104,14 @@ function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
         <div><small>CAMPAIGN</small><strong>${escapeHtml(campaign.requirements.campaign)}</strong></div>
       </div>
       ${tags}
-      ${current ? `<section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${escapeHtml(current.title)}</strong><span>${escapeHtml(current.author)} · ${escapeHtml(current.version)}</span></div></section>` : ""}
+      ${current ? `<section class="current-campaign"><div><small>CURRENT ${escapeHtml(campaign.requirements.campaign.toUpperCase())}</small><strong>${escapeHtml(current.title)}</strong><span>${escapeHtml(byline(current.author, versionTag(current.version)))}</span></div></section>` : ""}
     </div>`;
 }
 
 function renderCard(campaign: Campaign, selected: Campaign | null, context: LibraryContext) {
   const classes = ["campaign-card", `faction-${campaignSlot(campaign.requirements.campaign)}`, campaign.id === selected?.id ? "selected" : ""].join(" ").trim();
   return `<button class="${classes}" data-library-campaign="${escapeHtml(campaign.id)}">
-    <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(campaign.author)}${campaign.version ? ` · v${escapeHtml(campaign.version)}` : ""}</p></div>
+    <div class="campaign-copy"><h2>${escapeHtml(campaign.title)}</h2><p>${escapeHtml(byline(campaign.author, versionTag(campaign.version)))}</p></div>
     ${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}
   </button>`;
 }
