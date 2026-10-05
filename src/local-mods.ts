@@ -51,7 +51,9 @@ function localCampaign(mod: LocalModEntry): Campaign {
 }
 
 /// Cloud and local entries live in one list. Local entries are read from disk,
-/// so they stay visible when the cloud catalogue cannot be reached.
+/// so they stay visible when the cloud catalogue cannot be reached. A Library mod
+/// downloaded for later keeps the Library's id: the Library lists the cloud entry,
+/// My Mods the local copy.
 export function mergeCatalog(cloud: Catalog | null, entries: LocalModEntry[]): Catalog | null {
   const local = entries.map(localCampaign);
   if (!cloud) {
@@ -59,8 +61,7 @@ export function mergeCatalog(cloud: Catalog | null, entries: LocalModEntry[]): C
       ? { name: "Your local mods", updatedAt: "", sourceKind: "local", campaigns: local }
       : null;
   }
-  const known = new Set(cloud.campaigns.map((campaign) => campaign.id));
-  return { ...cloud, campaigns: [...cloud.campaigns, ...local.filter((campaign) => !known.has(campaign.id))] };
+  return { ...cloud, campaigns: [...cloud.campaigns, ...local] };
 }
 
 export function localModDialog() {
@@ -165,7 +166,7 @@ export function bindLocalModEvents(context: LocalModsContext, campaigns: Campaig
     });
   document.querySelectorAll<HTMLButtonElement>("[data-action='remove-local-mod']").forEach((button) => {
     button.addEventListener("click", () => {
-      const campaign = campaigns.find((item) => item.id === button.dataset.campaign);
+      const campaign = campaigns.find((item) => item.isLocal && item.id === button.dataset.campaign);
       if (campaign) void removeLocalMod(context, campaign, installedIds.includes(campaign.id));
     });
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergeCatalog } from "./local-mods";
 import { renderAddLocalDialog } from "./render-add-local-dialog";
-import { campaignSlot } from "./domain";
+import { campaignSlot, findCampaign } from "./domain";
 import { sortCampaignsByRecentPlay } from "./resume";
 import type { Catalog, LocalModEntry, SavedCampaignResume } from "./types";
 
@@ -71,10 +71,10 @@ describe("mergeCatalog", () => {
     expect(mergeCatalog(null, [])).toBeNull();
   });
 
-  it("never lists a local mod twice when its id already exists in the cloud", () => {
+  it("keeps a downloaded copy of a cloud mod apart from the cloud entry", () => {
     const merged = mergeCatalog(cloud, [localMod("zerus-rising", "Zerus Rising", "Heart of the Swarm")])!;
-    expect(merged.campaigns).toHaveLength(2);
-    expect(merged.campaigns.some((campaign) => campaign.isLocal)).toBe(false);
+    expect(merged.campaigns.filter((campaign) => !campaign.isLocal)).toHaveLength(2);
+    expect(merged.campaigns.filter((campaign) => campaign.isLocal).map((campaign) => campaign.id)).toEqual(["zerus-rising"]);
   });
 
   it("routes a local mod into the campaign branch its metadata declared", () => {
@@ -169,5 +169,27 @@ describe("recent-play ordering across cloud and local mods", () => {
     );
     expect(sortCampaignsByRecentPlay(swarm, []).map((campaign) => campaign.id))
       .toEqual(["local-new", "local-old", "zerus-rising"]);
+  });
+});
+
+describe("findCampaign", () => {
+  const library = cloudCampaign("zerus-rising", "Zerus Rising", "Heart of the Swarm");
+  const kept = (sha: string) => ({ ...mergeCatalog(null, [{ ...localMod("zerus-rising", "Zerus Rising", "Heart of the Swarm"), sha256: sha }])!.campaigns[0] });
+
+  it("installs a kept copy from disk while it is the Library's file", () => {
+    const found = findCampaign("zerus-rising", [library, kept("b".repeat(64))], []);
+    expect(found?.isLocal).toBeFalsy();
+    expect(found?.package.source).toBe("/home/player/.ccm-reborn/local/archives/zerus-rising.zip");
+  });
+
+  it("installs the Library's newer file over an older kept copy", () => {
+    const found = findCampaign("zerus-rising", [library, kept("c".repeat(64))], []);
+    expect(found?.package.source).toBe("https://example.invalid/zerus-rising.zip");
+  });
+
+  it("finds archive mods and plain local mods", () => {
+    const archived = { ...library, id: "archive-x" };
+    expect(findCampaign("archive-x", [], [archived])?.id).toBe("archive-x");
+    expect(findCampaign("zerus-rising", [kept("c".repeat(64))], [])?.isLocal).toBe(true);
   });
 });

@@ -24,7 +24,17 @@ export const versionTag = (version: string | null | undefined) => (version?.trim
 /// The parts that exist, joined with " · " (author, version, size…).
 export const byline = (...parts: string[]) => parts.filter(Boolean).join(" · ");
 
-export type InstallAction ="install" | "update" | "reinstall";
+/// The mod an install of `id` uses. The Library's entry wins over a copy kept in My Mods
+/// under the same id, so an update installs the new file; while both are the same file,
+/// the kept copy on disk is used and nothing is downloaded.
+export function findCampaign(id: string, catalog: Campaign[], archive: Campaign[]): Campaign | undefined {
+  const library = catalog.find((item) => item.id === id && isCommunityCampaign(item)) ?? archive.find((item) => item.id === id);
+  const kept = catalog.find((item) => item.id === id && item.isLocal);
+  if (library && kept) return kept.package.sha256 === library.package.sha256 ? { ...library, package: kept.package } : library;
+  return library ?? catalog.find((item) => item.id === id);
+}
+
+export type InstallAction = "install" | "update" | "reinstall";
 
 /// What an Install button does for this mod: the mod in its slot in another version is an
 /// update; the same version is a reinstall (put its files back as they were). A mod without

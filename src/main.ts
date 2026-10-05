@@ -7,7 +7,7 @@ import type {
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
 import { fitLibraryDetail, renderLibrary } from "./render-library";
-import { installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
+import { findCampaign, installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
 import { renderDashboard } from "./render-dashboard";
@@ -55,7 +55,7 @@ let settingsProfileDirDraft = profileDir;
 
 const installFlow = {
   gameDir: () => gameDir, profileDir: () => profileDir,
-  campaign: (id: string) => catalog?.campaigns.find((item) => item.id === id) ?? archiveCampaigns().find((item) => item.id === id) ?? myModsCampaign(id),
+  campaign: (id: string) => findCampaign(id, catalog?.campaigns ?? [], archiveCampaigns()) ?? myModsCampaign(id),
   activity: () => installActivity,
   message: () => message,
   isCurrent: (campaign: Campaign) => isCurrentCatalogCampaign(campaign, inspection),

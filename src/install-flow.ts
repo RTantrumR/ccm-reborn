@@ -102,10 +102,12 @@ export const installSetting = () =>
 let choice = { asCurrent: true, always: false };
 
 /// `choose`: from an Install button. A mod that isn't on this PC yet first asks whether to
-/// play it now or only download it; switching in My Mods never asks.
+/// play it now or only download it; switching in My Mods never asks, nor does a mod
+/// already downloaded (its package is a file on disk).
 export function requestInstall(flow: InstallFlow, campaignId: string, choose = false) {
   const campaign = flow.campaign(campaignId);
-  if (choose && campaign && !campaign.isLocal && !campaign.isCcm && !flow.isCurrent(campaign) && !installsAsCurrent()) {
+  const onDisk = !campaign?.package.source.startsWith("https://");
+  if (choose && campaign && !onDisk && !campaign.isCcm && !flow.isCurrent(campaign) && !installsAsCurrent()) {
     choice = { asCurrent: true, always: false };
     modal = { pending: { kind: "install", id: campaignId }, stage: "choose", inMission: null, action: "install", error: "", savedAs: null };
     flow.render();
@@ -123,6 +125,8 @@ async function keepForLater(flow: InstallFlow, campaign: Campaign) {
   flow.render();
   try {
     const path = await invoke<string>("download_package", { source: campaign.package.source, sha256: campaign.package.sha256, size: campaign.package.size });
+    // An older copy kept under this id gives way, or the new one would become "<id>-2".
+    await invoke("remove_local_mod", { id: campaign.id });
     await invoke("add_local_mod", { path, overrides: {
       id: campaign.id, title: campaign.title, author: campaign.author, version: campaign.version, description: campaign.description,
     } });
