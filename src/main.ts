@@ -303,27 +303,35 @@ function setGameDirectory(game: GameDirectoryCandidate) {
   localStorage.setItem("ccm-game-directory", gameDir);
 }
 
-async function detectGameDirectory() {
+type MessageKind = "neutral" | "success" | "error";
+
+/// One busy operation: shows `working` with a spinner while every action is
+/// disabled, then reports the task's result, or its error, in the status bar.
+async function runTask(working: string, task: () => Promise<string | [string, MessageKind]>) {
   busy = true;
-  message = "Looking for StarCraft II…";
+  message = working;
   messageKind = "neutral";
   render();
   try {
-    const locations = await invoke<GameDirectoryCandidate[]>("detect_game_directories");
-    if (!locations.length) throw new Error("StarCraft II was not found in the standard locations. Choose its folder manually.");
-    setGameDirectory(locations[0]);
-    await refreshProfiles();
-    message = `Found StarCraft II: ${locations[0].label}`;
-    messageKind = "success";
-    await inspectDirectory();
+    const result = await task();
+    [message, messageKind] = typeof result === "string" ? [result, "success"] : result;
   } catch (error) {
-    message = String(error);
+    message = error instanceof Error ? error.message : String(error);
     messageKind = "error";
   } finally {
     busy = false;
     render();
   }
 }
+
+const detectGameDirectory = () => runTask("Looking for StarCraft II…", async () => {
+  const locations = await invoke<GameDirectoryCandidate[]>("detect_game_directories");
+  if (!locations.length) throw new Error("StarCraft II was not found in the standard locations. Choose its folder manually.");
+  setGameDirectory(locations[0]);
+  await refreshProfiles();
+  await inspectDirectory();
+  return `Found StarCraft II: ${locations[0].label}`;
+});
 
 async function loadCatalog() {
   if (!catalogSource) {
@@ -391,76 +399,35 @@ async function inspectDirectory() {
 
 async function restoreOriginals(targetPath: string) {
   if (!gameDir || !targetPath) return;
-  busy = true;
-  message = "Restoring original campaign files…";
-  messageKind = "neutral";
-  render();
-  try {
+  await runTask("Restoring original campaign files…", async () => {
     const result = await invoke<RestoreResult>("restore_original_campaigns", { gameDir, profileDir: profileDir || null, targetPath });
-    if (result.conflicts.length) {
-      message = `Nothing was changed: ${result.conflicts.length} managed files were modified outside CCM Reborn.`;
-      messageKind = "error";
-    } else {
-      message = result.restoredFiles ? `Original campaign files restored (${result.restoredFiles}).` : "Original campaigns are already active.";
-      messageKind = "success";
-    }
     await inspectDirectory();
-  } catch (error) {
-    message = String(error);
-    messageKind = "error";
-  } finally {
-    busy = false;
-    render();
-  }
+    if (result.conflicts.length) return [`Nothing was changed: ${result.conflicts.length} managed files were modified outside CCM Reborn.`, "error"];
+    return result.restoredFiles ? `Original campaign files restored (${result.restoredFiles}).` : "Original campaigns are already active.";
+  });
 }
 
-async function migrateLegacySnapshot(campaignId: string) {
-  busy = true;
-  message = "Migrating legacy CCM saves to the selected account…";
-  messageKind = "neutral";
-  render();
-  try {
-    const result = await migrateLegacyProfile(campaignId, profileDir);
-    if (!result) {
-      message = "";
-      return;
-    }
-    message = `Migrated ${result.filesCopied} legacy profile files for ${result.campaignId}.`;
-    messageKind = "success";
-    await inspectDirectory();
-  } catch (error) {
-    message = String(error);
-    messageKind = "error";
-  } finally {
-    busy = false;
-    render();
-  }
-}
+const migrateLegacySnapshot = (campaignId: string) => runTask("Migrating legacy CCM saves to the selected account…", async () => {
+  const result = await migrateLegacyProfile(campaignId, profileDir);
+  if (!result) return ["", "neutral"];
+  await inspectDirectory();
+  return `Migrated ${result.filesCopied} legacy profile files for ${result.campaignId}.`;
+});
 
 async function openBattleNet() {
-  busy = true;
-  message = "Opening Battle.net…";
-  messageKind = "neutral";
-  render();
-  try {
+  const opened = "Battle.net is opening. Press Play there to launch StarCraft II.";
+  await runTask("Opening Battle.net…", async () => {
     await invoke("open_battle_net");
-    const successMessage = "Battle.net is opening. Press Play there to launch StarCraft II.";
-    message = successMessage;
-    messageKind = "success";
-    window.clearTimeout(battleNetMessageTimer);
-    battleNetMessageTimer = window.setTimeout(() => {
-      if (message === successMessage) {
-        message = "";
-        render();
-      }
-    }, 3500);
-  } catch (error) {
-    message = String(error);
-    messageKind = "error";
-  } finally {
-    busy = false;
-    render();
-  }
+    return opened;
+  });
+  // The hint only matters while the player switches windows.
+  window.clearTimeout(battleNetMessageTimer);
+  battleNetMessageTimer = window.setTimeout(() => {
+    if (message === opened) {
+      message = "";
+      render();
+    }
+  }, 3500);
 }
 
 async function boot() {
