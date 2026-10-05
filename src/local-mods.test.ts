@@ -98,11 +98,12 @@ describe("add-local-mod dialog", () => {
     suggestedId: "local-my-hots-mod",
   };
 
-  it("prefills editable fields, escapes titles and keeps hashes and game paths out of view", () => {
-    const html = renderAddLocalDialog(inspection, { title: inspection.title, author: "", version: "" }, "/tmp/mod.zip");
-    expect(html).toContain('id="local-mod-title"');
-    expect(html).toContain('id="local-mod-author"');
-    expect(html).toContain('id="local-mod-version"');
+  it("shows the author's own details read-only, escapes titles and keeps hashes and game paths out of view", () => {
+    const html = renderAddLocalDialog(inspection, "/tmp/mod.zip");
+    // Name, author and version are the mod author's; the player only confirms.
+    expect(html).not.toContain("<input");
+    expect(html).toContain("Kit · v1.0.2");
+    expect(html).toContain("mod.zip");
     expect(html).toContain("My &lt;HotS&gt; Mod");
     expect(html).not.toContain("<HotS>");
     // Players can't act on a checksum or an install path; the check still runs.

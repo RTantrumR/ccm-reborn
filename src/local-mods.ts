@@ -14,16 +14,9 @@ export type LocalModsContext = {
   render: () => void;
 };
 
-export type LocalModDraft = {
-  title: string;
-  author: string;
-  version: string;
-};
-
 let mods: LocalModEntry[] = [];
 let pendingPath = "";
 let pendingInspection: LocalPackageInspection | null = null;
-let draft: LocalModDraft = { title: "", author: "", version: "" };
 
 export function localModEntries() {
   return mods;
@@ -47,7 +40,7 @@ function localCampaign(mod: LocalModEntry): Campaign {
     author: mod.author || "Unknown author",
     version: mod.version || "unversioned",
     description: mod.description
-      || "You added this mod from your computer. CCM keeps its own copy of the archive.",
+      || "You added this mod from your computer. CCM Reborn keeps its own copy of the archive.",
     tags: [],
     requirements: { campaign: mod.campaign },
     package: { source: mod.archivePath, sha256: mod.sha256, size: mod.size },
@@ -70,7 +63,7 @@ export function mergeCatalog(cloud: Catalog | null, entries: LocalModEntry[]): C
 }
 
 export function localModDialog() {
-  return pendingInspection ? renderAddLocalDialog(pendingInspection, draft, pendingPath) : "";
+  return pendingInspection ? renderAddLocalDialog(pendingInspection, pendingPath) : "";
 }
 
 export function closeLocalModDialog(context: LocalModsContext) {
@@ -93,7 +86,6 @@ async function chooseLocalPackage(context: LocalModsContext) {
     const inspection = await invoke<LocalPackageInspection>("inspect_local_package", { path: selected });
     pendingInspection = inspection;
     pendingPath = selected;
-    draft = { title: inspection.title, author: inspection.author, version: inspection.version };
     context.setMessage("", "neutral");
   } catch (error) {
     pendingInspection = null;
@@ -108,18 +100,13 @@ async function chooseLocalPackage(context: LocalModsContext) {
 async function confirmAddLocalMod(context: LocalModsContext) {
   if (!pendingInspection || !pendingPath) return;
   const path = pendingPath;
-  const overrides = {
-    title: draft.title.trim(),
-    author: draft.author.trim(),
-    version: draft.version.trim(),
-  };
   pendingInspection = null;
   pendingPath = "";
   context.setBusy(true);
   context.setMessage("Adding the mod to your list…", "neutral");
   context.render();
   try {
-    const entry = await invoke<LocalModEntry>("add_local_mod", { path, overrides });
+    const entry = await invoke<LocalModEntry>("add_local_mod", { path });
     await context.reload();
     context.setHighlight(entry.id);
     // The wash only has to catch the eye once; a permanent marker would just
@@ -144,7 +131,7 @@ async function removeLocalMod(context: LocalModsContext, campaign: Campaign, ins
   const warning = installed
     ? " It is installed in StarCraft II right now: that campaign stays exactly as it is, but Repair will not work until you add the archive again."
     : "";
-  if (!window.confirm(`Remove ${campaign.title} from your list? CCM deletes its own copy of the archive and nothing else.${warning}`)) {
+  if (!window.confirm(`Remove ${campaign.title} from your list? CCM Reborn deletes its own copy of the archive and nothing else.${warning}`)) {
     return;
   }
   context.setBusy(true);
@@ -168,22 +155,19 @@ export function localModsHeaderButton(busy: boolean) {
 export function bindLocalModEvents(context: LocalModsContext, campaigns: Campaign[], installedIds: string[]) {
   document.querySelector<HTMLButtonElement>("[data-action='add-local-mod']")
     ?.addEventListener("click", () => void chooseLocalPackage(context));
-  document.querySelector<HTMLButtonElement>("[data-action='cancel-local-mod']")
-    ?.addEventListener("click", (event) => {
+  // Both the × and Cancel close it; each must also clear the pending mod, or
+  // the next render() would open the dialog again.
+  document.querySelectorAll<HTMLButtonElement>("[data-action='cancel-local-mod']").forEach((button) => {
+    button.addEventListener("click", (event) => {
       event.preventDefault();
       closeLocalModDialog(context);
     });
+  });
   document.querySelector<HTMLButtonElement>("[data-action='confirm-local-mod']")
     ?.addEventListener("click", (event) => {
       event.preventDefault();
       void confirmAddLocalMod(context);
     });
-  (["title", "author", "version"] as const).forEach((field) => {
-    const input = document.querySelector<HTMLInputElement>(`#local-mod-${field}`);
-    input?.addEventListener("input", () => {
-      draft = { ...draft, [field]: input.value };
-    });
-  });
   document.querySelectorAll<HTMLButtonElement>("[data-action='remove-local-mod']").forEach((button) => {
     button.addEventListener("click", () => {
       const campaign = campaigns.find((item) => item.id === button.dataset.campaign);

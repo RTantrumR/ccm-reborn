@@ -62,7 +62,7 @@ export async function applyCampaignInstall(flow: InstallFlow) {
   const profileDir = flow.profileDir();
   if (!plan || !gameDir || !profileDir) return;
   const campaign = flow.catalog()?.campaigns.find((item) => item.id === plan.campaignId);
-  if (!campaign || !window.confirm(`Apply ${campaign.title} v${campaign.version}? StarCraft II must be fully closed. CCM will use only the selected profile and keep rollback snapshots for both profile and campaign files.`)) return;
+  if (!campaign || !window.confirm(`Apply ${campaign.title} v${campaign.version}? StarCraft II must be fully closed. CCM Reborn will use only the selected profile and keep rollback snapshots for both profile and campaign files.`)) return;
   const preparing = `Preparing ${campaign.title} for installation…`;
   flow.setBusy(true); flow.setPendingPlan(null); flow.setCampaignId(campaign.id);
   flow.setActivity(pendingActivity("preparing-install", preparing)); flow.setFailure(null); flow.setMessage(preparing, "neutral"); flow.render();

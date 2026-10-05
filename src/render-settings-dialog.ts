@@ -52,7 +52,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
             <option value="">Choose before applying an install…</option>
             ${profileCandidates.map((profile, index) => `<option value="${escapeHtml(profile.path)}" ${profile.path === profileDirDraft ? "selected" : ""}>${escapeHtml(profileOptionLabel(profile.path, index))}</option>`).join("")}
           </select>
-          <small>This is the single account profile whose bank, saves, and campaign progress CCM may switch. The first detected profile is selected automatically; choose the other one only if that is the account you play on.</small>
+          <small>This is the single account profile whose bank, saves, and campaign progress CCM Reborn may switch. The first detected profile is selected automatically; choose the other one only if that is the account you play on.</small>
           ${profileDirDraft ? `<small class="profile-path">${escapeHtml(profileDirDraft)}</small>` : ""}
         </label>
         <div class="directory-actions">

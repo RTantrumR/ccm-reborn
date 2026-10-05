@@ -15,8 +15,12 @@ export function renderInstallStatus(options: {
   activity: InstallProgress | null;
   failure: InstallFailure | null;
   logPath: string;
+  busy?: boolean;
 }) {
-  const { message, messageKind, activity, failure, logPath } = options;
+  const { message, messageKind, activity, failure, logPath, busy } = options;
+  // A neutral message while busy is work in progress (reading an archive,
+  // opening Battle.net): show a spinner so it never looks frozen.
+  const working = busy && messageKind === "neutral" && !activity;
   if (!message) return "";
   const percent = activity?.downloadedBytes !== null && activity?.downloadedBytes !== undefined
     && activity.totalBytes !== null && activity?.totalBytes !== undefined && activity.totalBytes > 0
@@ -31,8 +35,8 @@ export function renderInstallStatus(options: {
   const diagnostics = messageKind === "error" && failure
     ? `<div class="diagnostics-actions"><button class="ghost compact" data-action="copy-diagnostics">Copy diagnostics</button>${logPath ? `<button class="ghost compact" data-action="open-log-folder">Open logs folder</button><code>${escapeHtml(logPath)}</code>` : ""}</div>`
     : "";
-  return `<section class="status ${messageKind} ${activity ? "installing" : ""}" role="status" aria-live="polite">
-    <span>${messageKind === "success" ? "✓" : messageKind === "error" ? "!" : activity ? "↻" : "i"}</span>
+  return `<section class="status ${messageKind} ${activity ? "installing" : ""} ${working ? "working" : ""}" role="status" aria-live="polite">
+    <span>${messageKind === "success" ? "✓" : messageKind === "error" ? "!" : activity ? "↻" : working ? "" : "i"}</span>
     <div class="status-copy"><p>${escapeHtml(message)}</p>${activity ? `<div class="install-progress"><div><small>${escapeHtml(activity.phase.replaceAll("-", " ").toUpperCase())}</small><strong>${escapeHtml(detail)}</strong></div><div class="progress-track" aria-label="Installation progress"><i style="width: ${percent ?? 100}%"></i></div></div>` : ""}${diagnostics}</div>
   </section>`;
 }

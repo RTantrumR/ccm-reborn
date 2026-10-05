@@ -1,4 +1,3 @@
-import type { LocalModDraft } from "./local-mods";
 import type { LocalPackageInspection } from "./types";
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
@@ -9,39 +8,32 @@ const formatBytes = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 1024 ? 1 : 0)} MB`;
 
-/// The fields come from the archive's own `metadata.txt`. They stay editable
-/// because real CCM packages frequently ship without an author or a version.
-export function renderAddLocalDialog(
-  inspection: LocalPackageInspection,
-  draft: LocalModDraft,
-  archivePath: string,
-) {
-  const field = (name: "title" | "author" | "version", label: string, placeholder: string) => `
-    <label>${label}
-      <input id="local-mod-${name}" spellcheck="false" value="${escapeHtml(draft[name])}" placeholder="${escapeHtml(placeholder)}" />
-    </label>`;
+/// Name, author and version come from the archive's own `metadata.txt`; they are
+/// the mod author's to set, so the player only confirms.
+export function renderAddLocalDialog(inspection: LocalPackageInspection, archivePath: string) {
+  const byline = [inspection.author, inspection.version ? `v${inspection.version}` : ""].filter(Boolean).join(" · ");
+  const fileName = archivePath.split(/[\\/]/).pop() ?? archivePath;
   return `
     <dialog id="add-local-mod-dialog">
       <form method="dialog" class="dialog-card">
         <button class="close" value="cancel" data-action="cancel-local-mod" aria-label="Close">×</button>
-        <p class="eyebrow">ADD A MOD FROM YOUR COMPUTER</p>
-        <h2>${escapeHtml(inspection.title)}</h2>
+        <div>
+          <p class="eyebrow">ADD A MOD FROM YOUR COMPUTER</p>
+          <h2>${escapeHtml(inspection.title)}</h2>
+          ${byline ? `<p class="dialog-byline">${escapeHtml(byline)}</p>` : ""}
+        </div>
         <div class="metadata">
           <div><small>CAMPAIGN</small><strong>${escapeHtml(inspection.campaign)}</strong></div>
           <div><small>SIZE</small><strong>${formatBytes(inspection.size)}</strong></div>
-          <div><small>FILES</small><strong>${inspection.files}</strong></div>
         </div>
-        ${field("title", "Name", "How this mod should appear in your list")}
-        ${field("author", "Author", "Leave empty if the archive does not say")}
-        ${field("version", "Version", "Leave empty if the archive does not say")}
         <p class="dialog-note">
-          CCM keeps its own copy of <code>${escapeHtml(archivePath)}</code>, so the mod keeps working
+          CCM Reborn keeps its own copy of <code>${escapeHtml(fileName)}</code>, so the mod keeps working
           after you move or delete that file.
         </p>
         <p class="dialog-note">Adding changes nothing in StarCraft II. You choose Install afterwards.</p>
         <div class="dialog-actions">
           <button class="ghost" value="cancel" data-action="cancel-local-mod">Cancel</button>
-          <button class="primary" value="default" data-action="confirm-local-mod">Add to my list</button>
+          <button class="primary" value="default" data-action="confirm-local-mod" autofocus>Add to my list</button>
         </div>
       </form>
     </dialog>`;
