@@ -27,7 +27,7 @@ export function renderAddLocalDialog(
         <p class="eyebrow">ADD A MOD FROM YOUR COMPUTER</p>
         <h2>${escapeHtml(inspection.title)}</h2>
         <div class="metadata">
-          <div><small>BRANCH</small><strong>${escapeHtml(inspection.campaign)}</strong></div>
+          <div><small>CAMPAIGN</small><strong>${escapeHtml(inspection.campaign)}</strong></div>
           <div><small>PACKAGE</small><strong>${formatBytes(inspection.size)}</strong></div>
           <div><small>FILES</small><strong>${inspection.files}</strong></div>
         </div>

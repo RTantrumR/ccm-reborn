@@ -1,12 +1,12 @@
 /* Library: campaign list (left) + detail pane (right). */
-.workspace { display: grid; grid-template-columns: minmax(0, 350px) minmax(0, 1fr); gap: var(--space-5); }
+.workspace { display: grid; grid-template-columns: minmax(0, 350px) minmax(0, 1fr); align-items: start; gap: var(--space-5); }
 .library-workspace { margin-top: 0; }
 .campaign-list { display: grid; align-content: start; gap: 2px; }
 
 .campaign-card {
-  min-height: 72px;
+  min-height: 64px;
   display: grid;
-  grid-template-columns: 52px 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: var(--space-3);
   padding: 10px var(--space-3);
@@ -14,35 +14,30 @@
   color: var(--text-body);
   background: var(--bg-row);
   border: 1px solid transparent;
+  border-left: 2px solid var(--faction, var(--border-accent));
   border-radius: var(--radius);
-  transition: background-color .12s ease, border-color .12s ease;
+  transition: background-color .12s ease, box-shadow .12s ease;
 }
 .campaign-card:hover { background: var(--bg-row-hover); }
-.campaign-card.selected { background: var(--bg-row-hover); border-color: var(--accent); }
+/* Inset ring, so the left edge keeps the campaign colour. */
+.campaign-card.selected { background: var(--bg-row-hover); box-shadow: inset 0 0 0 1px var(--accent); }
 .campaign-copy { min-width: 0; }
 .campaign-copy h2 { margin: 0 0 var(--space-1); font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .campaign-copy p { margin: 0; color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
 .installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-label) var(--font-body); letter-spacing: .06em; }
 
-.cover { width: 52px; height: 52px; display: grid; place-items: center; overflow: hidden; border-radius: var(--radius); color: var(--text-hi); font: 600 28px var(--font-display); }
-.cover-ember { background: radial-gradient(circle at 55% 25%, #efc75b, #7b2631 44%, #171323 83%); }
-.cover-void { background: radial-gradient(circle at 35% 20%, #86d6ff, #2e2c81 40%, #0a1028 82%); }
-.cover-arc { background: radial-gradient(circle at 70% 30%, #c6ffdc, #247a76 39%, #102b38 76%); }
-.cover-jade { background: radial-gradient(circle at 30% 24%, #f7e8a1, #7b6334 34%, #1b2534 80%); }
-
-.campaign-detail { min-height: 535px; overflow: hidden; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
-.hero { height: 185px; position: relative; overflow: hidden; border-bottom: 1px solid var(--border-accent); }
-.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--bg-row) 0%, transparent 65%), linear-gradient(0deg, var(--bg-row), transparent 46%); }
-.grid { position: absolute; inset: -60% -10% 0 40%; opacity: .18; background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 32px 32px; transform: perspective(250px) rotateX(52deg); }
-.hero-label { position: absolute; z-index: 1; left: var(--space-5); top: var(--space-5); padding: 3px 8px; color: var(--text-hi); border: 1px solid var(--border-accent-hi); border-radius: var(--radius); background: rgba(19, 20, 24, .7); font: 600 var(--fs-label) var(--font-body); text-transform: uppercase; letter-spacing: .08em; }
-.hero-rune { position: absolute; z-index: 1; right: 8%; top: 13px; color: var(--text-hi); font: 600 150px/1 var(--font-display); opacity: .8; }
-
-.detail-body { padding: var(--space-5); }
+/* Sticky so a pick far down the list visibly lands. Its own scroll only
+   matters when the window is shorter than the pane; render() resets it. */
+.campaign-detail { position: sticky; top: var(--space-5); max-height: calc(100vh - 2 * var(--space-5)); overflow-y: auto; background: var(--bg-row); border: 1px solid var(--border-accent); border-radius: var(--radius); }
+.detail-head { padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 2px solid var(--faction, var(--accent)); }
+.detail-head .eyebrow { color: var(--faction, var(--accent)); }
+.byline { margin: 6px 0 0; color: var(--text-body); font: 500 var(--fs-small) var(--font-body); }
+.detail-body { padding: var(--space-4) var(--space-5) var(--space-5); }
 .title-row { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
 .title-row h2 { margin: var(--space-1) 0 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 .version { margin-top: 3px; padding: 4px 8px; color: var(--text-body); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-meta) var(--font-mono); }
-.description { max-width: 660px; color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; }
-.metadata { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 20px 0 var(--space-3); overflow: hidden; background: var(--divider); border: 1px solid var(--divider); border-radius: var(--radius); }
+.description { max-width: 660px; margin: 0; color: var(--text-body); font-size: var(--fs-body); line-height: 1.65; }
+.metadata { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin: 20px 0 var(--space-3); overflow: hidden; background: var(--divider); border: 1px solid var(--divider); border-radius: var(--radius); }
 .metadata div { padding: 10px var(--space-3); background: var(--bg-inset); }
 .metadata small { display: block; margin-bottom: var(--space-1); color: var(--text-faint); font: 600 var(--fs-label) var(--font-body); letter-spacing: .1em; }
 .metadata strong { color: var(--text-hi); font-size: var(--fs-small); font-weight: 600; }
@@ -55,13 +50,14 @@
 .current-campaign strong { color: var(--text-hi); font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .current-campaign span { color: var(--text-body); font: var(--fs-meta) var(--font-body); }
 .open-battle-net { flex: 0 0 auto; }
-.install-row { display: flex; gap: var(--space-2); margin-top: var(--space-5); }
+.install-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-5); }
+.install-blocked { margin: var(--space-2) 0 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
 .current-campaign + .install-row { margin-top: 14px; }
 .install { min-width: 145px; }
 .safety-note { margin: var(--space-4) 0 0; color: var(--text-body); font: var(--fs-meta)/1.5 var(--font-body); }
 
 .empty-list { padding: 20px; color: var(--text-body); border: 1px dashed var(--border-muted); border-radius: var(--radius); font-size: var(--fs-small); }
-.empty-detail { min-height: 535px; display: grid; justify-items: center; align-content: center; padding: 40px; text-align: center; }
+.empty-detail { min-height: 420px; display: grid; justify-items: center; align-content: center; padding: 40px; text-align: center; }
 .empty-detail h2 { margin: 18px 0 var(--space-2); font-size: var(--fs-card); }
 .empty-detail p { max-width: 430px; color: var(--text-body); line-height: 1.6; }
 .empty-orb { display: grid; place-items: center; width: 64px; height: 64px; color: var(--accent); border: 1px solid var(--accent); border-radius: 50%; font-size: 28px; }

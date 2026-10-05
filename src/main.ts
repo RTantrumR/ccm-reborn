@@ -153,7 +153,7 @@ function bindEvents() {
     document.querySelector<HTMLDialogElement>("#settings-dialog")?.close();
     void loadCatalog();
   });
-  document.querySelector<HTMLButtonElement>("[data-action='choose-directory']")?.addEventListener("click", () => void chooseGameDirectory());
+  document.querySelectorAll<HTMLButtonElement>("[data-action='choose-directory']").forEach((button) => button.addEventListener("click", () => void chooseGameDirectory()));
   document.querySelector<HTMLButtonElement>("[data-action='refresh-catalog']")?.addEventListener("click", () => void loadCatalog());
   document.querySelector<HTMLButtonElement>("[data-action='use-cloud-catalog']")?.addEventListener("click", () => useCatalogSource(communityCatalog));
   document.querySelector<HTMLButtonElement>("[data-action='use-local-catalog']")?.addEventListener("click", () => useCatalogSource(localDevCatalog));

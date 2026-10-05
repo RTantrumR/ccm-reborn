@@ -8,10 +8,6 @@ export function campaignSlot(campaign: string) {
   return "nova-covert-ops";
 }
 
-export function coverClass(id: string) {
-  return ["ember", "void", "arc", "jade"][Array.from(id).reduce((total, character) => total + character.charCodeAt(0), 0) % 4];
-}
-
 export const formatBytes = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 1024 ? 1 : 0)} MB`;

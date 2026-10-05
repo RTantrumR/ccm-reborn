@@ -1,15 +1,11 @@
 /* Campaigns page: one card per base-campaign slot. */
 .campaign-dashboard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.campaign-slot { --slot: var(--accent); overflow: hidden; background: var(--bg-row); border: 1px solid var(--border-accent); border-top: 2px solid var(--slot); border-radius: var(--radius); }
-.campaign-slot.ember { --slot: var(--faction-terran); }
-.campaign-slot.jade { --slot: var(--faction-zerg); }
-.campaign-slot.void { --slot: var(--faction-protoss); }
-.campaign-slot.arc { --slot: var(--faction-covert); }
+.campaign-slot { overflow: hidden; background: var(--bg-row); border: 1px solid var(--border-accent); border-top: 2px solid var(--faction, var(--accent)); border-radius: var(--radius); }
 
 .slot-header { display: flex; align-items: center; gap: var(--space-3); padding: 14px var(--space-4); border-bottom: 1px solid var(--divider); }
-.slot-header .eyebrow { color: var(--slot); }
+.slot-header .eyebrow { color: var(--faction); }
 .slot-header h2 { margin: 2px 0 0; font-size: 17px; }
-.slot-sigil { display: grid; place-items: center; width: 32px; height: 32px; color: var(--slot); border: 1px solid var(--slot); border-radius: var(--radius); font: 600 18px var(--font-display); }
+.slot-sigil { display: grid; place-items: center; width: 32px; height: 32px; color: var(--faction); border: 1px solid var(--faction); border-radius: var(--radius); font: 600 18px var(--font-display); }
 .slot-state { margin-left: auto; padding: 2px 8px; border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-label) var(--font-body); }
 .slot-state.custom { color: var(--status-ok); }
 .slot-state.original { color: var(--text-muted); }
@@ -38,8 +34,7 @@
 .alternatives { padding: var(--space-3) var(--space-4) var(--space-4); }
 .alternative-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
 .alternative-heading span { color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
-.install-option { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: var(--space-2) 0; border-top: 1px solid var(--divider); }
-.option-cover { display: grid; place-items: center; width: 36px; height: 36px; color: var(--text-hi); border-radius: var(--radius); font: 600 18px var(--font-display); }
+.install-option { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: var(--space-2) 0; border-top: 1px solid var(--divider); }
 .option-copy { min-width: 0; display: grid; gap: 3px; }
 /* The title line is a flex row: a bordered pill on the text baseline would
    otherwise lose its top edge to the overflow clip. */
