@@ -18,6 +18,7 @@ include!("legacy/part12_discovery.rs");
 include!("legacy/part13_legacy_migration.rs");
 include!("legacy/part17_local_mods.rs");
 include!("legacy/part18_installed_mods.rs");
+include!("legacy/part19_ccm_store.rs");
 
 #[cfg(test)]
 mod tests_a {

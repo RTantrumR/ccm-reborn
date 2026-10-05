@@ -461,7 +461,9 @@ pub fn run() {
             add_local_mod,
             list_local_mods,
             remove_local_mod,
-            list_installed_mods
+            list_installed_mods,
+            list_ccm_store,
+            install_ccm_store_mod
         ])
         .run(tauri::generate_context!())
         .expect("error while running CCM Reborn");
