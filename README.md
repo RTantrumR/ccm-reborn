@@ -6,59 +6,53 @@
 [Download the latest release](https://github.com/umaxfun/ccm-reborn/releases/latest)
 · [Report a problem](https://github.com/umaxfun/ccm-reborn/issues)
 
-CCM Reborn is a desktop manager for the community campaigns made for the
-original StarCraft II Custom Campaign Manager (CCM). Pick a campaign from a
-catalogue, review the change, and play it — the app keeps each vanilla campaign
-branch and its progress separate.
+CCM Reborn is a desktop app for playing the community campaigns made for the
+original StarCraft II Custom Campaign Manager (CCM). Pick a campaign, install
+it, and play. The app remembers what you installed and where you left off.
 
 ## Get playing
 
 1. Download the build for your system from the
    [latest release](https://github.com/umaxfun/ccm-reborn/releases/latest):
-   universal `.dmg` for macOS, `setup.exe` for Windows, or `.deb` / AppImage
-   for Linux. On Linux, use the `.deb` on Debian/Ubuntu and the AppImage on
-   most other desktop distributions.
-2. Open **Sources** and choose your StarCraft II folder — the folder containing
-   `Maps` (and usually `SC2Data`). Then select a community cloud catalogue or
-   a local `catalog.json`.
-3. Open **Campaigns**, find a campaign in its StarCraft II branch, and choose
-   **Install**. CCM Reborn shows a review first; select **Apply installation**
-   only after you are happy with the files and save/profile changes.
-4. Press **Open Battle.net**, then press **Play** in Battle.net to launch
-   StarCraft II. When you return, the campaign card tells you which campaign is
-   installed and, when a compatible save is found, where to continue.
+   `.dmg` for macOS, `setup.exe` for Windows, or `.deb` / AppImage for Linux
+   (`.deb` on Debian/Ubuntu, AppImage on most other distributions).
+2. Open the app. It looks for StarCraft II by itself; if it can't find the
+   game, choose the StarCraft II folder when it asks.
+3. Open **Campaigns**. Each of the four StarCraft II campaigns (Wings of
+   Liberty, Heart of the Swarm, Legacy of the Void, Nova Covert Ops) has its own
+   card. Pick a mod under it and choose **Install**. The app shows what will
+   change; confirm with **Apply installation**.
+4. Press **Open Battle.net**, then **Play** in Battle.net. When you come back,
+   the card shows which mod is installed and, when it finds your save, where to
+   continue.
 
 ## What CCM Reborn does for you
 
-- Keeps Wings of Liberty, Heart of the Swarm, Legacy of the Void, and Nova
-  Covert Ops as separate campaign branches, so changing one does not replace
-  the others.
-- Sorts alternatives you have played by recent progress; campaigns with no
-  detected progress stay alphabetised below them.
-- Matches saves and campaign progress to the selected StarCraft II account
-  profile, rather than treating a save from another account as yours.
-- Lets you switch between a community cloud catalogue and a local catalogue —
-  useful both for regular play and trying a package before it is published.
+- Treats each of the four campaigns on its own: installing a mod for Heart of
+  the Swarm leaves Wings of Liberty as it was.
+- Lists the mods you played most recently first; the rest stay in
+  alphabetical order below them.
+- Keeps your progress with the StarCraft II account that earned it, so a save
+  from another account is never treated as yours.
+- Lets you add a mod from your computer next to the ones in the online list.
 
-## Your campaigns and saves stay in your control
+## Your campaigns and saves are safe
 
-Close StarCraft II before installing, repairing, or restoring a campaign. An
-install is reviewed before it changes anything: CCM Reborn verifies the
-download checksum, stages the package, takes a snapshot of the selected
-campaign branch, and records exactly which files it manages. If a step fails,
-it rolls the change back. **Restore original** restores only that selected
-branch; it does not reset the other campaigns.
+Close StarCraft II before you install, repair, or restore a campaign. Before
+anything changes, CCM Reborn checks that the download arrived complete and
+unchanged and keeps a backup of the campaign it replaces. If something goes
+wrong halfway, it undoes the change. **Restore original** brings back the
+original version of that one campaign; the other three stay as they are.
 
-The app may ask you to choose an SC2 account profile. This is intentional: it
-keeps campaign progress associated with the account that earned it. Older CCM
-snapshots are left alone until you explicitly migrate or remove them.
+The app may ask which StarCraft II account to use. That keeps your progress
+with the account that earned it. Backups made by the old CCM are left alone
+until you choose to move or remove them.
 
-## Campaign catalogues
+## Campaign lists
 
-A catalogue is simply a list of campaigns and verified download links. CCM
-Reborn can use a community cloud catalogue or a local `catalog.json`; it checks
-each package's SHA-256 and size before installing it. A catalogue source is
-always selected explicitly in **Sources**.
+The campaigns you see come from the community list online. If you want a
+different list, for example one a mod author shares for testing, you can
+change it in **Sources**.
 
 ## Need help?
 
@@ -83,7 +77,7 @@ CCM Reborn installs the existing CCM ZIP layout; it does **not** invent a packag
 | Legacy / Void / LotV | `Maps/Campaign/void` |
 | Nova / Covert / NCO | `Maps/Campaign/nova` |
 
-Before installing, the app checks the ZIP SHA-256, stages its contents, snapshots its managed campaign branch, clears it, and then copies the package. WoL deliberately leaves sibling campaign branches such as `swarm` and `void` alone. **Restore original campaigns** targets one declared campaign slot and restores that slot’s snapshot. A small journal handles a crash in the middle of a copy.
+Before installing, the app checks the ZIP SHA-256, stages its contents, snapshots the campaign folder it manages, clears it, and then copies the package. WoL deliberately leaves the sibling campaign folders `swarm` and `void` alone. **Restore original campaigns** targets one declared campaign slot and restores that slot’s snapshot. A small journal handles a crash in the middle of a copy.
 
 Successful installs also write an exact package inventory to
 `<game>/.ccm-reborn/installed/`. It contains every archive member copied to the
@@ -149,7 +143,7 @@ live game, `install` and `restore` also require the exact `--profile-dir`.
 `restore` always requires one explicit campaign `--target`; it never guesses
 which of the four campaign slots you meant.
 
-Choose the directory that contains SC2's `Maps` directory (on Windows, it normally also contains `SC2Data` and `Support64`) in **Configure sources**. Use a disposable SC2 install for development.
+Choose the directory that contains SC2's `Maps` directory (on Windows, it normally also contains `SC2Data` and `Support64`) in **Sources**. Use a disposable SC2 install for development.
 
 Each catalog entry requires metadata for display and a verified package:
 
@@ -212,7 +206,7 @@ The publisher creates readable immutable archive names such as
 }
 ```
 
-Point **Configure sources** at the HTTPS URL for `catalog.json`. The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
+Point **Sources** at the HTTPS URL for `catalog.json`. The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
 
 After publishing, verify every public package size with `npm run catalog:smoke`.
 Add `-- --verify f-yuri-of-the-swarm` to download and verify one package's SHA-256 too.
