@@ -80,7 +80,7 @@ function render() {
       <header>
         <div><h1>${page === "dashboard" ? "Campaigns" : "Library"}</h1></div>
         <div class="header-actions">
-          <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}<button class="settings-button" data-action="show-settings">Sources</button>
+          <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
         </div>
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath })}

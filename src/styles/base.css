@@ -26,7 +26,7 @@ button { cursor: pointer; }
 /* Buttons. Each kind has four legible states: rest, hover, pressed, disabled.
    Rest is flat (no glow, no inset highlight) so it never reads as pressed.
    Disabled is flat grey with a not-allowed cursor, never a busy cursor. */
-.primary, .ghost, .settings-button {
+.primary, .ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,13 +41,13 @@ button { cursor: pointer; }
 .primary { color: var(--text-hi); background: var(--accent-cta); }
 .primary:hover:not(:disabled) { background: var(--accent-cta-hover); }
 .primary:active:not(:disabled) { background: var(--accent-deep); }
-.ghost, .settings-button { color: var(--text-body); background: transparent; border-color: var(--border-accent-hi); font-weight: 500; }
-.ghost:hover:not(:disabled), .settings-button:hover:not(:disabled) { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
-.ghost:active:not(:disabled), .settings-button:active:not(:disabled) { background: var(--bg-btn-ghost-active); }
+.ghost { color: var(--text-body); background: transparent; border-color: var(--border-accent-hi); font-weight: 500; }
+.ghost:hover:not(:disabled) { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.ghost:active:not(:disabled) { background: var(--bg-btn-ghost-active); }
 button:disabled { cursor: not-allowed; }
 .primary:disabled { color: var(--text-muted); background: var(--bg-disabled); }
-.ghost:disabled, .settings-button:disabled { color: var(--text-muted); border-color: var(--divider); }
-.compact, .settings-button { padding: 6px 12px; font-size: var(--fs-meta); }
+.ghost:disabled { color: var(--text-muted); border-color: var(--divider); }
+.compact { padding: 6px 12px; font-size: var(--fs-meta); }
 
 .link-action {
   padding: 0;
