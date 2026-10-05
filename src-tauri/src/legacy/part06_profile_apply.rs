@@ -107,7 +107,8 @@ fn apply_profile_transition_at_with_hook<F>(
     source_campaign_id: &str,
     source_dependencies: &[PathBuf],
     target_campaign_id: &str,
-    target_dependencies: &[PathBuf],
+    // Kept for callers; save ownership no longer depends on the incoming mod's dependencies.
+    _target_dependencies: &[PathBuf],
     staging: &Path,
     before_apply: F,
 ) -> Result<ProfileTransaction, String>
@@ -136,25 +137,20 @@ where
         .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
         .map(|name| name.to_ascii_lowercase())
         .collect::<Vec<_>>();
-    let target_dependency_names = target_dependencies
-        .iter()
-        .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
-        .map(|name| name.to_ascii_lowercase())
-        .collect::<Vec<_>>();
-    let mut target_profile_dependency_names = target_dependency_names.clone();
-    if source_campaign_id == target_campaign_id {
-        for dependency in &source_dependency_names {
-            if !target_profile_dependency_names.contains(dependency) {
-                target_profile_dependency_names.push(dependency.clone());
-            }
-        }
-    }
-    let source_allow_unmanaged = source_campaign_id.is_empty();
-    let target_allow_unmanaged = target_campaign_id.starts_with("vanilla-");
-    let source_saves = campaign_owned_save_paths(profile, &source_spec, &source_dependency_names, source_allow_unmanaged)?;
-    let target_saves = campaign_owned_save_paths(profile, &target_spec, &target_profile_dependency_names, target_allow_unmanaged)?;
-    let source_store_saves = campaign_owned_save_paths(&source_store, &source_spec, &source_dependency_names, source_allow_unmanaged)?;
-    let target_store_saves = campaign_owned_save_paths(&target_store, &target_spec, &target_profile_dependency_names, target_allow_unmanaged)?;
+    // Save ownership: whatever is installed in a slot owns every campaign save of that
+    // slot while it is active, so the outgoing campaign snapshots all of them and the
+    // incoming one gets back everything in its store. Only one campaign is live per
+    // slot, so the stores stay separate without guessing a save's mod from its
+    // save.details. (Filtering by .SC2Mod dependency used to leave saves of mods
+    // without one unsnapshotted, and a switch to vanilla then deleted them.)
+    // Nothing live is deleted unless it was just snapshotted.
+    let source_saves = campaign_owned_save_paths(profile, &source_spec, &[], true)?;
+    let target_saves: Vec<PathBuf> = campaign_owned_save_paths(profile, &target_spec, &[], true)?
+        .into_iter()
+        .filter(|save| source_saves.contains(save))
+        .collect();
+    let source_store_saves = campaign_owned_save_paths(&source_store, &source_spec, &[], true)?;
+    let target_store_saves = campaign_owned_save_paths(&target_store, &target_spec, &[], true)?;
     let progress_path = profile.join("CampaignProgress.xml");
     let source_banks = campaign_slot_bank_paths(profile, &source_spec);
     let target_banks = campaign_slot_bank_paths(profile, &target_spec);

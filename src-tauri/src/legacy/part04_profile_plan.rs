@@ -160,8 +160,9 @@ fn plan_profile_transition(
         } else if is_campaign_folder {
             match inspect_save_details(&save_path) {
                 Ok(details) => {
-                    let belongs = save_details_match_campaign(&details, &spec)
-                        && save_details_match_dependencies(&details, &dependency_names);
+                    // Same rule as the apply step: the installed campaign owns every
+                    // campaign save of its slot.
+                    let belongs = save_details_match_campaign(&details, &spec);
                     let detail = save_details_summary(&details);
                     (belongs, detail)
                 }
@@ -248,11 +249,6 @@ fn plan_profile_transition(
         )?;
     }
 
-    if dependency_names.is_empty() {
-        warnings.push(
-            "No managed dependency was found for the current campaign; individual campaign saves stay untouched until their mod identity is known.".into(),
-        );
-    }
     let restores_target_profile = files.iter().any(|file| file.action.starts_with("restore"));
     if files.is_empty() {
         warnings.push(format!(

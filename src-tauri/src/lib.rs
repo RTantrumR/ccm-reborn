@@ -39,3 +39,9 @@ mod tests_c {
     use zip::{write::SimpleFileOptions, ZipWriter};
     include!("legacy/tests_c.rs");
 }
+
+#[cfg(test)]
+mod tests_d {
+    use super::*;
+    include!("legacy/tests_d.rs");
+}
