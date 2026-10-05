@@ -1,0 +1,12 @@
+/* Bundled locally: the CSP (default-src 'self') blocks Google Fonts.
+   The per-weight files carry unicode-range, so Cyrillic/Greek titles load
+   only the subsets they need. Archivo has no Cyrillic; the font stacks in
+   tokens.css fall back to Noto Sans for those glyphs. */
+@import "@fontsource/archivo/400.css";
+@import "@fontsource/archivo/500.css";
+@import "@fontsource/archivo/600.css";
+@import "@fontsource/archivo/700.css";
+@import "@fontsource/noto-sans/400.css";
+@import "@fontsource/noto-sans/500.css";
+@import "@fontsource/noto-sans/600.css";
+@import "@fontsource/noto-sans/700.css";

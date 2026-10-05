@@ -1,0 +1,125 @@
+/* App shell: the window scrolls, the sidebar stays put. Scrolling stays on
+   the window on purpose: render() replaces innerHTML on every state change,
+   which would reset the scroll position of an inner scroll container. */
+#app { min-height: 100vh; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: start;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--divider);
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 var(--space-2) var(--space-5); color: var(--text-hi); font: 700 17px var(--font-display); letter-spacing: .04em; }
+.brand b { color: var(--accent); font-weight: 700; }
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--text-hi);
+  font-size: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  border-radius: var(--radius);
+}
+.sidebar > .eyebrow { padding: 0 var(--space-2); }
+
+nav { margin-top: var(--space-2); display: grid; gap: 2px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--space-2);
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  text-align: left;
+  font: 500 var(--fs-body) var(--font-body);
+}
+.nav-item span { width: 16px; color: inherit; text-align: center; }
+.nav-item strong { margin-left: auto; color: var(--text-faint); font-size: var(--fs-label); font-weight: 600; }
+.nav-item:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.nav-item.active, .nav-item.active:hover { color: var(--accent); background: var(--accent-tint); }
+.nav-item.active strong { color: var(--accent); }
+
+.sidebar-footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: auto;
+  padding: var(--space-3) var(--space-2) 0;
+  color: var(--text-body);
+  font: 500 var(--fs-small) var(--font-body);
+  border-top: 1px solid var(--divider);
+}
+.sidebar-footer small { color: var(--text-faint); font-size: var(--fs-label); letter-spacing: .1em; }
+.dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); }
+.dot.muted { background: var(--status-warn); }
+
+main { min-width: 0; width: 100%; max-width: 1480px; margin: 0 auto; padding: var(--space-6) clamp(24px, 4vw, 64px); }
+main > header { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: var(--space-5); }
+h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
+.header-actions { display: flex; align-items: center; gap: var(--space-2); }
+
+/* Status bar: one line per message, the left edge carries the kind. */
+.status {
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: var(--space-5);
+  padding: 10px var(--space-3);
+  color: var(--text-body);
+  background: var(--bg-row);
+  border: 1px solid var(--border-accent);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  font: var(--fs-small)/1.5 var(--font-body);
+}
+.status > span { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--text-hi); background: var(--accent-cta); font-size: var(--fs-meta); font-weight: 700; }
+.status p { margin: 0; }
+.status.success { border-left-color: var(--status-ok); }
+.status.success > span { color: var(--bg-page); background: var(--status-ok); }
+.status.error { border-left-color: var(--status-danger); }
+.status.error > span { color: var(--bg-page); background: var(--status-danger); }
+.status.installing > span { animation: status-spin 1s linear infinite; }
+@keyframes status-spin { to { transform: rotate(360deg); } }
+.status-copy { display: grid; flex: 1; min-width: 0; gap: var(--space-2); }
+.install-progress { display: grid; gap: 6px; }
+.install-progress > div:first-child { display: flex; justify-content: space-between; gap: var(--space-3); }
+.install-progress small { color: var(--text-faint); font-size: var(--fs-label); letter-spacing: .1em; }
+.install-progress strong { color: var(--text-hi); font: var(--fs-label) var(--font-mono); white-space: nowrap; }
+.progress-track { height: 6px; overflow: hidden; border: 1px solid var(--border-muted); border-radius: var(--radius); background: var(--bg-inset); }
+.progress-track i { display: block; height: 100%; min-width: 8%; background: var(--accent); transition: width .18s ease; }
+.diagnostics-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); padding-top: 2px; }
+.diagnostics-actions code { color: var(--text-muted); font-size: var(--fs-label); overflow-wrap: anywhere; }
+
+/* Old-CCM snapshot migration banner: a real caveat, so warn-coloured. */
+.legacy-migration {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-row);
+  border: 1px solid var(--border-accent);
+  border-left: 2px solid var(--status-warn);
+  border-radius: var(--radius);
+}
+.legacy-migration p { margin: 0; color: var(--text-body); font: var(--fs-small)/1.5 var(--font-body); }
+.legacy-migration strong { color: var(--status-warn); }
+.legacy-migration div { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: var(--space-2); }
+
+@media (max-width: 700px) {
+  #app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  main { padding: 22px var(--space-4); }
+  main > header { align-items: flex-start; flex-wrap: wrap; }
+}

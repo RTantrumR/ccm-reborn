@@ -1,0 +1,70 @@
+/* Design tokens. Colours match the CCM_Website Battle.net palette
+   (CCM_Website/src/styles/tokens.css) so the app and the site read as one
+   product. Every colour, size and radius in the other stylesheets should come
+   from here. */
+:root {
+  /* Surfaces */
+  --bg-page: #131418;
+  --bg-sidebar: #18191d;
+  --bg-row: #1d1f24;
+  --bg-row-hover: #25272d;
+  --bg-inset: #16171b;              /* inputs, nested lists inside a panel */
+  --bg-btn-ghost-hover: rgba(255, 255, 255, .06);
+  --bg-btn-ghost-active: rgba(255, 255, 255, .11);
+  --bg-disabled: #2a2c32;
+
+  /* Accent */
+  --accent: #148eff;                /* links, active nav, coloured labels */
+  --accent-cta: #0f6fce;            /* surfaces carrying white text (AA 5.0:1) */
+  --accent-cta-hover: #1175d6;      /* still AA under white (4.6:1) */
+  --accent-deep: #0b5cad;           /* pressed */
+  --accent-tint: rgba(20, 142, 255, .14);
+
+  /* Lines */
+  --border-accent: rgba(255, 255, 255, .14);    /* panel borders */
+  --border-accent-hi: rgba(255, 255, 255, .30); /* outlined buttons */
+  --border-muted: rgba(255, 255, 255, .18);     /* chips, inputs */
+  --divider: rgba(255, 255, 255, .09);
+
+  /* Text. Must-read text (warnings, control labels, why-disabled hints)
+     never uses --text-dim or --text-faint: those are metadata only. */
+  --text-hi: #ffffff;
+  --text-body: #b6b9bf;
+  --text-muted: #9ea3ab;
+  --text-dim: #878b93;
+  --text-faint: #83878f;
+
+  /* Base campaigns */
+  --faction-terran: #f2a33c;        /* Wings of Liberty */
+  --faction-zerg: #c05ae8;          /* Heart of the Swarm */
+  --faction-protoss: #58d8ff;       /* Legacy of the Void */
+  --faction-covert: #4f6fd8;        /* Nova Covert Ops */
+  --faction-all: #dfe9f0;
+
+  /* Status */
+  --status-ok: #6cdb00;
+  --status-warn: #ffb400;
+  --status-danger: #f2735f;
+
+  /* Type */
+  --font-display: "Archivo", "Noto Sans", "Segoe UI", sans-serif;
+  --font-body: "Noto Sans", "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --fs-page: 28px;                  /* page title */
+  --fs-card: 20px;                  /* detail / dialog title */
+  --fs-title: 15px;                 /* row and card titles */
+  --fs-body: 14px;
+  --fs-small: 13px;                 /* buttons, secondary copy */
+  --fs-meta: 12px;
+  --fs-label: 11px;                 /* uppercase captions; the smallest size */
+
+  /* Space and shape */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius: 4px;
+  --sidebar-width: 228px;
+}
