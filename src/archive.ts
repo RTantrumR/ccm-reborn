@@ -50,6 +50,17 @@ export async function refreshArchive(): Promise<void> {
   }
 }
 
+/** Asks the feed to look again at a mod whose download no longer matches its entry (its
+    author put a new file behind the same link), then reloads the archive. Gives the mod's
+    entry as it is now, and why it can't be installed when it can't. */
+export async function recheckArchiveMod(id: string): Promise<{ campaign: Campaign | null; problem: string | null }> {
+  const response = await fetch(`${ARCHIVE_FEED}/recheck/${id.replace(/^archive-/, "")}`, { method: "POST", signal: AbortSignal.timeout(15 * 60_000) });
+  if (!response.ok) throw new Error(`feed answered ${response.status}`);
+  const result = (await response.json()) as { problem: string | null };
+  await refreshArchive();
+  return { campaign: archive.find((mod) => mod.id === id) ?? null, problem: result.problem };
+}
+
 export function bindArchive(onError: (message: string) => void) {
   bindGallery();
   document.querySelectorAll<HTMLButtonElement>("[data-action='open-link']").forEach((button) =>

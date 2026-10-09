@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { recheckArchiveMod } from "./archive";
 import { formatBytes, versionTag } from "./domain";
 import type { InstallAction } from "./domain";
 import type { Campaign, InstallProgress, InstallResult } from "./types";
@@ -70,6 +71,28 @@ const requestFor = (campaign: Campaign, gameDir: string, profileDir: string | nu
   packageSize: campaign.package.size, gameDir,
 });
 
+// The download didn't match the entry's size or SHA-256 (part14_cloud_cache.rs).
+const PACKAGE_CHANGED = /does not match the catalog/;
+
+/** A Campaign Archive mod's author may put a new file behind the same link. When the
+    download doesn't match the entry, the feed looks at the link again and the work runs
+    once more with the entry as it is now: the first player to meet the new file fixes it
+    for everyone. */
+export async function withCurrentPackage<T>(flow: InstallFlow, campaign: Campaign, work: (current: Campaign) => Promise<T>): Promise<T> {
+  try {
+    return await work(campaign);
+  } catch (error) {
+    if (!campaign.id.startsWith("archive-") || !PACKAGE_CHANGED.test(String(error))) throw error;
+    const checking = `${campaign.title} has a new file. Checking it…`;
+    flow.setActivity(pendingActivity("rechecking", checking)); flow.setMessage(checking, "neutral"); flow.render();
+    const result = await recheckArchiveMod(campaign.id).catch(() => null);
+    const current = result?.campaign;
+    if (!current || current.package.sha256 === campaign.package.sha256) throw error;
+    if (!current.package.sha256) throw new Error(`${campaign.title} can't be installed any more: ${result.problem ?? "its download changed"}.`);
+    return work(current);
+  }
+}
+
 function recordFailure(flow: InstallFlow, phase: string, error: unknown) {
   const message = String(error);
   flow.setMessage(message, "error");
@@ -124,11 +147,15 @@ async function keepForLater(flow: InstallFlow, campaign: Campaign) {
   flow.setActivity(pendingActivity("downloading", `Downloading ${campaign.title}…`));
   flow.render();
   try {
-    const path = await invoke<string>("download_package", { source: campaign.package.source, sha256: campaign.package.sha256, size: campaign.package.size });
+    let current = campaign;
+    const path = await withCurrentPackage(flow, campaign, (fresh) => {
+      current = fresh;
+      return invoke<string>("download_package", { source: fresh.package.source, sha256: fresh.package.sha256, size: fresh.package.size });
+    });
     // An older copy kept under this id gives way, or the new one would become "<id>-2".
-    await invoke("remove_local_mod", { id: campaign.id });
+    await invoke("remove_local_mod", { id: current.id });
     await invoke("add_local_mod", { path, overrides: {
-      id: campaign.id, title: campaign.title, author: campaign.author, version: campaign.version, description: campaign.description,
+      id: current.id, title: current.title, author: current.author, version: current.version, description: current.description,
     } });
     await flow.reloadLocalMods();
     if (modal) modal.stage = "kept";
@@ -341,7 +368,7 @@ async function installCampaign(flow: InstallFlow, campaignId: string) {
     const result = campaign.isCcm
       // Installed in place from the original CCM's folder.
       ? await invoke<InstallResult>("install_ccm_store_mod", { gameDir, profileDir, id: campaign.id })
-      : await invoke<InstallResult>("install_campaign", { request: requestFor(campaign, gameDir, profileDir) });
+      : await withCurrentPackage(flow, campaign, (current) => invoke<InstallResult>("install_campaign", { request: requestFor(current, gameDir, profileDir) }));
     flow.setMessage(`Installed ${[result.title, versionTag(result.version)].filter(Boolean).join(" ")}. Press Play StarCraft II to start.`, "success");
     flow.setActivity(null); flow.setCampaignId("");
     await flow.inspectDirectory();
