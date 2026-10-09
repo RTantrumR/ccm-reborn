@@ -119,16 +119,37 @@ impl ProfileSandbox {
     }
 
     fn mission_save(&self, name: &str) -> PathBuf {
+        self.mission_save_of(name, b"Campaign/Swarm/ZChar02.SC2Map\0")
+    }
+
+    fn mission_save_of(&self, name: &str, details: &[u8]) -> PathBuf {
         let save = self.profile.join("Saves/Campaign").join(name);
-        write_test_save(&save, b"Campaign/Swarm/ZChar02.SC2Map\0");
+        write_test_save(&save, details);
+        save
+    }
+
+    /// A snapshot store as an earlier build left it: a mod's store with its resume manifest
+    /// and whatever saves that build filed there.
+    fn store_with_save(&self, store: &str, target: &str, name: &str, details: &[u8]) -> PathBuf {
+        let folder = self.profile_base.join(store);
+        fs::create_dir_all(&folder).unwrap();
+        let manifest = CampaignProfileResumeManifest {
+            format: 1, campaign_id: store.into(), target_path: target.into(), dependency_names: vec![], captured_at: 1, legacy_migrated: false,
+        };
+        fs::write(folder.join("ccm-resume.json"), serde_json::to_string(&manifest).unwrap()).unwrap();
+        let save = folder.join("Saves/Campaign").join(name);
+        write_test_save(&save, details);
         save
     }
 
     fn switch(&self, source: &str, target: &str) {
+        self.switch_slot("Maps/Campaign/swarm", source, target);
+    }
+
+    fn switch_slot(&self, slot: &str, source: &str, target: &str) {
         apply_profile_transition_at(
             &self.root, &self.profile, &self.profile_base,
-            "Maps/Campaign/swarm", "Maps/Campaign/swarm",
-            source, &[], target, &[], &self.staging,
+            slot, slot, source, &[], target, &[], &self.staging,
         )
         .unwrap();
     }
@@ -138,6 +159,58 @@ impl Drop for ProfileSandbox {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.root);
     }
+}
+
+const WOL_MISSION: &[u8] = b"Campaign/TRaynor01.SC2Map\0Campaigns/Liberty.SC2Campaign\0Campaigns/Swarm.SC2Campaign\0Campaigns/Void.SC2Campaign";
+const HOTS_HUB: &[u8] = b"\x05Kaldir\x04BRUTAL\x01>Campaign/Swarm/ZStoryExpedition\x00\x00\x01";
+const LOTV_MISSION: &[u8] = b"Campaign/Void/vAiur01.SC2Map\0Campaigns/Liberty.SC2Campaign\0Campaigns/Swarm.SC2Campaign\0Campaigns/Void.SC2Campaign";
+
+#[test]
+fn switching_one_campaign_leaves_the_other_campaigns_saves_where_they_are() {
+    // Every campaign save lists Liberty, Swarm and Void as dependencies. Going by those,
+    // a LotV switch used to take the WoL and HotS playthroughs with it.
+    let sandbox = ProfileSandbox::new("slot-scoped");
+    let wol = sandbox.mission_save_of("Liberation Day.SC2Save", WOL_MISSION);
+    let hub = sandbox.mission_save_of("Kaldir.SC2Save", HOTS_HUB);
+    let lotv = sandbox.mission_save_of("Aiur.SC2Save", LOTV_MISSION);
+    sandbox.switch_slot("Maps/Campaign/void", "", "lotv-mod");
+    assert!(wol.is_file(), "the WoL save stays live");
+    assert!(hub.is_file(), "the HotS hub save stays live");
+    assert!(!lotv.exists(), "only the LotV save goes with Blizzard's LotV campaign");
+    assert!(sandbox.profile_base.join("vanilla-legacy-of-the-void/Saves/Campaign/Aiur.SC2Save").is_file());
+    // A HotS switch owns the hub save, whose map has no extension, and nothing else.
+    sandbox.switch_slot("Maps/Campaign/swarm", "", "hots-mod");
+    assert!(wol.is_file());
+    assert!(!hub.exists());
+    assert!(sandbox.profile_base.join("vanilla-heart-of-the-swarm/Saves/Campaign/Kaldir.SC2Save").is_file());
+}
+
+#[test]
+fn saves_filed_under_another_campaigns_mod_come_back_on_the_next_switch() {
+    let sandbox = ProfileSandbox::new("rehome");
+    let stored = sandbox.store_with_save("lotv-mod", "Maps/Campaign/void", "Liberation Day.SC2Save", WOL_MISSION);
+    let stored_own = sandbox.store_with_save("lotv-mod", "Maps/Campaign/void", "Aiur.SC2Save", LOTV_MISSION);
+    // The player has since saved another "Liberation Day"; it keeps its name.
+    let newer = sandbox.mission_save_of("Liberation Day.SC2Save", b"Campaign/TRaynor02.SC2Map\0");
+    let newer_bytes = fs::read(&newer).unwrap();
+    sandbox.switch("", "hots-mod");
+    assert!(!stored.exists(), "the WoL save leaves the LotV mod's store");
+    assert!(stored_own.is_file(), "the LotV mod's own save stays in its store");
+    assert_eq!(fs::read(&newer).unwrap(), newer_bytes);
+    assert!(sandbox.profile.join("Saves/Campaign/Liberation Day (2).SC2Save").is_file(), "the older one comes back under a free name");
+    // An identical live copy means the stored one is just dropped.
+    let twin = sandbox.store_with_save("vanilla-legacy-of-the-void", "Maps/Campaign/void", "Liberation Day (2).SC2Save", WOL_MISSION);
+    sandbox.switch("hots-mod", "");
+    assert!(!twin.exists());
+    assert!(sandbox.profile.join("Saves/Campaign/Liberation Day (2).SC2Save").is_file());
+}
+
+#[test]
+fn hub_saves_name_their_story_map_without_an_extension() {
+    assert_eq!(extract_campaign_map_paths(HOTS_HUB), vec!["Campaign/Swarm/ZStoryExpedition"]);
+    assert_eq!(extract_campaign_map_paths(WOL_MISSION), vec!["Campaign/TRaynor01.SC2Map"]);
+    assert_eq!(mission_slot(&extract_campaign_map_paths(HOTS_HUB)), Some("Maps/Campaign/swarm"));
+    assert_eq!(extract_campaign_map_paths(b"CampaignPanelLastMission Campaign/"), Vec::<String>::new());
 }
 
 #[test]

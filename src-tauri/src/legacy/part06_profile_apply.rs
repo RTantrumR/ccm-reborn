@@ -137,12 +137,12 @@ where
         .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
         .map(|name| name.to_ascii_lowercase())
         .collect::<Vec<_>>();
-    // Save ownership: whatever is installed in a slot owns every campaign save of that
-    // slot while it is active, so the outgoing campaign snapshots all of them and the
-    // incoming one gets back everything in its store. Only one campaign is live per
-    // slot, so the stores stay separate without guessing a save's mod from its
-    // save.details. (Filtering by .SC2Mod dependency used to leave saves of mods
-    // without one unsnapshotted, and a switch to vanilla then deleted them.)
+    // Save ownership: whatever is installed in a slot owns every mission save of that
+    // slot (by the map's folder) while it is active, so the outgoing campaign snapshots
+    // all of them and the incoming one gets back everything in its store. The other
+    // slots' saves stay live: switching the LotV campaign leaves a WoL and a HotS
+    // playthrough where they are. (Filtering by .SC2Mod dependency used to leave saves
+    // of mods without one unsnapshotted, and a switch to vanilla then deleted them.)
     // Nothing live is deleted unless it was just snapshotted.
     let source_saves = campaign_owned_save_paths(profile, &source_spec, &[], true)?;
     let target_saves: Vec<PathBuf> = campaign_owned_save_paths(profile, &target_spec, &[], true)?
@@ -151,6 +151,11 @@ where
         .collect();
     let source_store_saves = campaign_owned_save_paths(&source_store, &source_spec, &[], true)?;
     let target_store_saves = campaign_owned_save_paths(&target_store, &target_spec, &[], true)?;
+    let mut reserved: HashSet<PathBuf> = target_store_saves
+        .iter()
+        .filter_map(|save| save.strip_prefix(&target_store).ok().map(|relative| profile.join(relative)))
+        .collect();
+    let misfiled = misfiled_store_saves(profile_base, profile, &mut reserved)?;
     let progress_path = profile.join("CampaignProgress.xml");
     let source_banks = campaign_slot_bank_paths(profile, &source_spec);
     let target_banks = campaign_slot_bank_paths(profile, &target_spec);
@@ -167,6 +172,7 @@ where
     touched.extend(target_saves.iter().cloned());
     touched.extend(source_store_saves.iter().cloned());
     touched.extend(source_saves.iter().filter_map(|path| profile_store_file(&source_store, profile, path).ok()));
+    touched.extend(misfiled.iter().flat_map(|save| std::iter::once(save.stored.clone()).chain(save.live.clone())));
     let transaction = ProfileTransaction::capture(touched, staging)?;
     // This must stay immediately before `operation`: if the process dies
     // after this line, `pending-install.json` contains the original bytes of
@@ -176,6 +182,13 @@ where
         &[profile_path.to_path_buf(), profile_base.to_path_buf()],
     )?;
     let operation = (|| {
+        // First, so a snapshot or a restore below never lands on a save still to be moved.
+        for save in &misfiled {
+            if let Some(live) = &save.live {
+                copy_file(&save.stored, live)?;
+            }
+            remove_profile_file(&save.stored)?;
+        }
         for stale in &source_store_saves {
             remove_profile_file(stale)?;
         }
@@ -343,7 +356,7 @@ fn push_profile_file_from_root(
 fn inspect_save_details(path: &Path) -> Result<SaveDetails, String> {
     let bytes = read_save_details_bytes(path)?;
     Ok(SaveDetails {
-        maps: extract_archive_paths(&bytes, "Campaign/", ".SC2Map"),
+        maps: extract_campaign_map_paths(&bytes),
         mods: extract_archive_paths(&bytes, "Mods/", ".SC2Mod"),
         campaigns: extract_archive_paths(&bytes, "Campaigns/", ".SC2Campaign"),
     })
@@ -393,14 +406,100 @@ fn extract_archive_paths(bytes: &[u8], marker: &str, suffix: &str) -> Vec<String
     paths
 }
 
+/// The map paths a save names, `Campaign/Swarm/ZChar02.SC2Map` style. A hub save names its
+/// story map without an extension (`Campaign/Swarm/ZStoryExpedition`), so a path ends at the
+/// first byte that can't be part of one, not at `.SC2Map`.
+fn extract_campaign_map_paths(bytes: &[u8]) -> Vec<String> {
+    const MARKER: &str = "Campaign/";
+    let text = String::from_utf8_lossy(bytes);
+    let mut paths = Vec::new();
+    let mut offset = 0;
+    while let Some(relative_start) = text[offset..].find(MARKER) {
+        let start = offset + relative_start;
+        let rest = &text[start + MARKER.len()..];
+        let length = rest
+            .char_indices()
+            .find(|(_, character)| !(character.is_ascii_alphanumeric() || matches!(character, '/' | '_' | '-' | '.' | ' ')))
+            .map_or(rest.len(), |(index, _)| index);
+        let candidate = text[start..start + MARKER.len() + length].trim_end().to_string();
+        offset = start + MARKER.len() + length;
+        if candidate.len() > MARKER.len() && !paths.contains(&candidate) {
+            paths.push(candidate);
+        }
+    }
+    paths
+}
+
+/// A mission save belongs to the slot whose folder holds its map (`mission_slot`): every
+/// campaign save lists Liberty, Swarm and Void as dependencies, so those can't tell the
+/// campaigns apart, and a save naming no map belongs to no slot and is never moved.
 fn save_details_match_campaign(details: &SaveDetails, spec: &CampaignProfileSpec) -> bool {
-    let marker = spec.save_marker.to_ascii_lowercase();
-    details
-        .maps
-        .iter()
-        .chain(details.campaigns.iter())
-        .map(|value| value.to_ascii_lowercase())
-        .any(|value| value.contains(&format!("campaign/{marker}")) || value.contains(&format!("campaigns/{marker}")))
+    mission_slot(&details.maps) == Some(spec.target)
+}
+
+/// The slot a snapshot store belongs to: `vanilla-<slot>` by name, a mod's by its resume
+/// manifest. A store without either says nothing about its saves.
+fn profile_store_target(store: &Path) -> Option<&'static str> {
+    let name = store.file_name()?.to_str()?;
+    if let Some(slot) = name.strip_prefix("vanilla-") {
+        return ["Maps/Campaign", "Maps/Campaign/swarm", "Maps/Campaign/void", "Maps/Campaign/nova"]
+            .into_iter()
+            .find(|target| campaign_slot_for_target(target) == Some(slot));
+    }
+    let manifest = read_campaign_profile_resume_manifest(&store.join("ccm-resume.json"), name).ok()?;
+    campaign_profile_spec(&manifest.target_path).map(|spec| spec.target)
+}
+
+/// A mission save a snapshot store holds for another slot than its own: an earlier build
+/// filed every campaign save under whichever slot was switched. On the next switch it
+/// goes back to the live profile, under a free name if the player has saved one of that
+/// name since, or is dropped when the live copy is the same file.
+struct MisfiledSave {
+    stored: PathBuf,
+    live: Option<PathBuf>,
+}
+
+fn misfiled_store_saves(profile_base: &Path, profile: &Path, reserved: &mut HashSet<PathBuf>) -> Result<Vec<MisfiledSave>, String> {
+    let mut misfiled = Vec::new();
+    if !profile_base.is_dir() {
+        return Ok(misfiled);
+    }
+    let mut stores: Vec<PathBuf> = fs::read_dir(profile_base).map_err(io_error)?.flatten().map(|entry| entry.path()).collect();
+    stores.sort();
+    for store in stores {
+        if fs::symlink_metadata(&store).map_err(io_error)?.file_type().is_symlink() || !store.is_dir() {
+            continue;
+        }
+        let Some(store_target) = profile_store_target(&store) else { continue };
+        for stored in collect_regular_files(&store.join("Saves"))? {
+            let relative = stored.strip_prefix(&store).map_err(|_| "Stored save escaped its store.")?;
+            if !is_user_loadable_campaign_save(&store, &stored)
+                || stored.extension().and_then(|extension| extension.to_str()).map(|extension| extension.eq_ignore_ascii_case("SC2Save")) != Some(true)
+            {
+                continue;
+            }
+            let Ok(details) = inspect_save_details(&stored) else { continue };
+            let Some(slot) = mission_slot(&details.maps) else { continue };
+            if slot == store_target {
+                continue;
+            }
+            let destination = profile.join(relative);
+            if destination.is_file() && fs::read(&destination).map_err(io_error)? == fs::read(&stored).map_err(io_error)? {
+                misfiled.push(MisfiledSave { stored, live: None });
+                continue;
+            }
+            // A free name: not on disk, not about to be written by this switch, not taken above.
+            let folder = destination.parent().ok_or("Stored save has no folder.")?.to_path_buf();
+            let stem = destination.file_stem().and_then(|stem| stem.to_str()).unwrap_or("Mission").to_string();
+            let live = std::iter::once(destination.clone())
+                .chain((2..1000).map(|number| folder.join(format!("{stem} ({number}).SC2Save"))))
+                .find(|candidate| !candidate.exists() && !reserved.contains(candidate))
+                .ok_or("No free name is left for a save that is coming back.")?;
+            reserved.insert(live.clone());
+            misfiled.push(MisfiledSave { stored, live: Some(live) });
+        }
+    }
+    Ok(misfiled)
 }
 
 fn save_details_match_dependencies(details: &SaveDetails, dependency_names: &[String]) -> bool {

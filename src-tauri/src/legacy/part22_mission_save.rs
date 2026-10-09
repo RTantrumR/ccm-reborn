@@ -433,6 +433,39 @@ mod mission_save_tests {
         assert_eq!(mission_slot(&[]), None);
     }
 
+    /// Prints what each real save says about itself, one line per save:
+    /// `CCM_SAVES_DIR="<folder>" cargo test real_saves -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn real_saves_report_their_map_and_campaigns() {
+        let Some(folder) = std::env::var_os("CCM_SAVES_DIR") else { return };
+        for path in collect_regular_files(Path::new(&folder)).unwrap() {
+            if path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("SC2Save")) != Some(true) {
+                continue;
+            }
+            match inspect_save_details(&path) {
+                Ok(details) => println!(
+                    "{}\t{:?}\tmaps={:?}\tcampaigns={:?}\tmods={:?}",
+                    path.strip_prefix(&folder).unwrap().display(),
+                    mission_slot(&details.maps),
+                    details.maps,
+                    details.campaigns,
+                    details.mods
+                ),
+                Err(error) => println!("{}\tUNREADABLE\t{error}", path.strip_prefix(&folder).unwrap().display()),
+            }
+        }
+    }
+
+    /// Prints one save's raw `save.details` as text: `CCM_SAVE_FILE="<file>" cargo test real_save_text -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn real_save_text() {
+        let Some(file) = std::env::var_os("CCM_SAVE_FILE") else { return };
+        let bytes = read_save_details_bytes(Path::new(&file)).unwrap();
+        println!("{} bytes\n{}", bytes.len(), String::from_utf8_lossy(&bytes).replace(|c: char| c.is_control(), "·"));
+    }
+
     #[test]
     fn save_names_are_safe_windows_file_names() {
         assert_eq!(safe_save_stem("Raynor: Rogue? - Liberation Day - 2026-10-05 15.44"), "Raynor Rogue - Liberation Day - 2026-10-05 15.44");

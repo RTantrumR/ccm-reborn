@@ -16,21 +16,25 @@ fn current_managed_campaign(root: &Path, target: &str) -> Result<Option<ManagedC
 fn campaign_profile_spec(target: &str) -> Option<CampaignProfileSpec> {
     match target {
         "Maps/Campaign" => Some(CampaignProfileSpec {
+            target: "Maps/Campaign",
             banks: &["WCampaign.SC2Bank", "WArchive.SC2Bank", "WArmy.SC2Bank", "WStory.SC2Bank", "WCampaignStats.SC2Bank"],
             save_marker: "liberty",
             progress_ids: &["WingsOfLiberty", "Liberty"],
         }),
         "Maps/Campaign/swarm" => Some(CampaignProfileSpec {
+            target: "Maps/Campaign/swarm",
             banks: &["ZCampaign.SC2Bank", "ZArchive.SC2Bank", "ZArmy.SC2Bank", "ZStory.SC2Bank", "ZCampaignStats.SC2Bank"],
             save_marker: "swarm",
             progress_ids: &["HeartOfTheSwarm", "Swarm"],
         }),
         "Maps/Campaign/void" => Some(CampaignProfileSpec {
+            target: "Maps/Campaign/void",
             banks: &["PCampaign.SC2Bank", "PArchive.SC2Bank", "PArmy.SC2Bank", "PStory.SC2Bank", "PCampaignStats.SC2Bank"],
             save_marker: "void",
             progress_ids: &["LegacyOfTheVoid", "Void"],
         }),
         "Maps/Campaign/nova" => Some(CampaignProfileSpec {
+            target: "Maps/Campaign/nova",
             banks: &["NCampaign.SC2Bank", "NArchive.SC2Bank", "NArmy.SC2Bank", "NStory.SC2Bank", "NCampaignStats.SC2Bank"],
             save_marker: "nova",
             progress_ids: &["NovaCovertOps", "Nova"],

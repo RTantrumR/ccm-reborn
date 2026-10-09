@@ -430,6 +430,8 @@ struct ManagedCampaignProfile {
 }
 
 struct CampaignProfileSpec {
+    // The slot folder (`Maps/Campaign/swarm`); a mission save belongs to the slot its map sits in.
+    target: &'static str,
     banks: &'static [&'static str],
     save_marker: &'static str,
     progress_ids: &'static [&'static str],
