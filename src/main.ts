@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import "./styles.css";
 import ccmLogo from "./assets/ccm-logo.png";
 import { mountWindowControls } from "./window-controls";
+import { blockBrowserControls } from "./browser-keys";
 import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
@@ -432,6 +433,7 @@ async function boot() {
   await loadLibrary();
 }
 
+blockBrowserControls();
 mountWindowControls();
 render();
 watchStarcraft(() => busy);
