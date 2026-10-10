@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./styles.css";
+import ccmLogo from "./assets/ccm-logo.png";
 import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
@@ -75,7 +76,7 @@ function render() {
   const restoreLibraryScroll = keepLibraryScroll();
   root.innerHTML = `
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark">C</span><span>CCM <b>REBORN</b></span></div>
+      <div class="brand"><img class="brand-mark" src="${ccmLogo}" alt=""><span>CCM <b>REBORN</b></span></div>
       <p class="eyebrow">CAMPAIGN CONTROL</p>
       <nav>
         <button class="nav-item ${page === "dashboard" ? "active" : ""}" data-page="dashboard"><span>◈</span> Campaigns</button>

@@ -17,16 +17,8 @@
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 var(--space-2) var(--space-5); color: var(--text-hi); font: 700 17px var(--font-display); letter-spacing: .04em; }
 .brand b { color: var(--accent); font-weight: 700; }
-.brand-mark {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  color: var(--text-hi);
-  font-size: 14px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  border-radius: var(--radius);
-}
+/* The CCM Discord's logo (taller than wide). */
+.brand-mark { height: 34px; width: auto; flex: none; }
 .sidebar > .eyebrow { padding: 0 var(--space-2); }
 
 nav { margin-top: var(--space-2); display: grid; gap: 2px; }
