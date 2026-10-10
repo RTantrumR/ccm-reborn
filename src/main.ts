@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./styles.css";
 import ccmLogo from "./assets/ccm-logo.png";
+import { mountWindowControls } from "./window-controls";
 import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
@@ -469,6 +470,7 @@ async function boot() {
   else render();
 }
 
+mountWindowControls();
 render();
 watchStarcraft(() => busy);
 void listen<InstallProgress>("install-progress", ({ payload }) => {

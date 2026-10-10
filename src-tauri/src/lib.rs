@@ -25,7 +25,6 @@ include!("legacy/part22_mission_save.rs");
 include!("legacy/part23_hosted_links.rs");
 include!("legacy/part24_save_rehome.rs");
 include!("legacy/part25_slot_check.rs");
-include!("legacy/part26_title_bar.rs");
 
 #[cfg(test)]
 mod tests_a {

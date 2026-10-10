@@ -451,10 +451,6 @@ fn zip_error(error: zip::result::ZipError) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
-            paint_title_bar(app);
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![
             inspect_game_directory,
             load_catalog,

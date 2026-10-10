@@ -25,6 +25,7 @@
   --border-accent-hi: rgba(255, 255, 255, .30); /* outlined buttons */
   --border-muted: rgba(255, 255, 255, .18);     /* chips, inputs */
   --divider: rgba(255, 255, 255, .09);
+  --window-close-hover: #c42b1c;    /* Windows' own close-button red */
   --scrollbar-thumb: rgba(255, 255, 255, .16);
   --scrollbar-thumb-hover: rgba(255, 255, 255, .30);
 
@@ -71,6 +72,7 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --titlebar-h: 32px;
   --radius: 4px;
   --sidebar-width: 228px;
 }

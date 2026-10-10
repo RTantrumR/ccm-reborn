@@ -1,0 +1,16 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "CCM Reborn",
+        "theme": "Dark",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 920,
+        "minHeight": 640,
+        "decorations": false,
+        "shadow": true
+      }
+    ]
+  }
+}

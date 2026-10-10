@@ -151,3 +151,23 @@ h1 { margin: 0; font-size: var(--fs-page); letter-spacing: -.01em; }
 .status-close { flex: 0 0 auto; width: 24px; height: 24px; margin: -2px -4px 0 0; padding: 0; color: var(--text-body); background: none; border: 0; border-radius: var(--radius); font-size: var(--fs-meta); }
 .status-close:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .status-close:focus-visible { outline: 2px solid var(--accent); }
+
+/* Windows: the app's own title bar (window-controls.ts). A transparent strip over the
+   top of the sidebar and the page header's top padding, so both run to the top. */
+.titlebar { position: fixed; inset: 0 0 auto 0; z-index: 20; height: var(--titlebar-h); display: flex; justify-content: end; }
+.window-controls { display: flex; }
+.window-controls button {
+  width: 46px;
+  height: var(--titlebar-h);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text-body);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.window-controls button:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.window-controls button:active { background: var(--bg-btn-ghost-active); }
+.window-controls [data-window="close"]:hover { color: #ffffff; background: var(--window-close-hover); }
+.custom-titlebar .sidebar { padding-top: var(--titlebar-h); }
