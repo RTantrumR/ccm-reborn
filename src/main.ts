@@ -163,7 +163,7 @@ function bindEvents() {
     void loadLibrary();
   });
   document.querySelectorAll<HTMLButtonElement>("[data-action='choose-directory']").forEach((button) => button.addEventListener("click", () => void chooseGameDirectory()));
-  document.querySelector<HTMLButtonElement>("[data-action='refresh-catalog']")?.addEventListener("click", () => void loadLibrary());
+  document.querySelector<HTMLButtonElement>("[data-action='refresh-catalog']")?.addEventListener("click", () => void loadLibrary(true));
   document.querySelector<HTMLButtonElement>("[data-action='detect-directory']")?.addEventListener("click", () => void detectGameDirectory());
   document.querySelectorAll<HTMLButtonElement>("[data-action='choose-profile']").forEach((button) => button.addEventListener("click", () => void chooseProfileDirectory()));
   document.querySelector<HTMLButtonElement>("[data-action='detect-profiles']")?.addEventListener("click", () => void refreshProfiles(true));
@@ -330,8 +330,9 @@ const detectGameDirectory = () => runTask("Looking for StarCraft II…", async (
   return `Found StarCraft II: ${locations[0].label}`;
 });
 
-/// The Campaign Archive's mods, the mods on this PC, and what is installed.
-async function loadLibrary() {
+/// The Campaign Archive's mods, the mods on this PC, and what is installed. `asked`: the
+/// player pressed Check for updates, so a good result is said too.
+async function loadLibrary(asked = false) {
   // Its end clears "busy", which must stay set while an install runs.
   if (busy) return;
   busy = true;
@@ -339,10 +340,11 @@ async function loadLibrary() {
   messageKind = "neutral";
   render();
   try {
-    await refreshArchive();
+    const archive = await refreshArchive();
     catalog = mergeCatalog(null, await refreshLocalMods());
     selectedId ||= archiveCampaigns()[0]?.id ?? "";
-    message = "";
+    [message, messageKind] = "problem" in archive ? [archive.problem, "error"]
+      : asked ? [`The Library is up to date: ${archive.count === 1 ? "1 mod" : `${archive.count} mods`}.`, "success"] : ["", "neutral"];
     await inspectDirectory();
   } catch (error) {
     message = String(error);

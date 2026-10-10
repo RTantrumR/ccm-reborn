@@ -38,16 +38,20 @@ const toCampaign = (mod: ArchiveMod): Campaign => ({
   images: mod.images.slice(0, 5).map((path) => `${ARCHIVE_FEED}${path}`),
 });
 
-/** Reloads the archive's mods. When the feed can't be reached the Library just shows
-    the catalog, as before. */
-export async function refreshArchive(): Promise<void> {
+/** Reloads the archive's mods. When the feed can't be reached the last list stays, and the
+    answer says why for the player. */
+export async function refreshArchive(): Promise<{ count: number } | { problem: string }> {
   try {
     const response = await fetch(`${ARCHIVE_FEED}/catalog.json`, { signal: AbortSignal.timeout(5000) });
+    // The feed's per-address limit (bot/src/ratelimit.ts).
+    if (response.status === 429) return { problem: "The Library was checked many times in a row. Try again in a minute." };
     if (!response.ok) throw new Error(`feed answered ${response.status}`);
     const feed = (await response.json()) as { mods: ArchiveMod[] };
     archive = feed.mods.map(toCampaign);
+    return { count: archive.length };
   } catch (error) {
     console.warn("[archive] feed unavailable:", error);
+    return { problem: "Couldn't reach the Campaign Archive. Check your internet connection, then press Check for updates." };
   }
 }
 
