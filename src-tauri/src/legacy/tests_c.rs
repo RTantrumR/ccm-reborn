@@ -396,3 +396,68 @@ fn plan_warns_when_most_archive_files_are_outside_the_installed_layout() {
 
     let _ = fs::remove_dir_all(sandbox);
 }
+
+// --- One file under two letter cases (Windows/macOS) --------------------------
+
+/// The previous mod holds `zlab02.SC2Map/BankList.xml`; the new package ships
+/// `banklist.xml`. On a case-insensitive disk that is one file.
+#[cfg(any(windows, target_os = "macos"))]
+fn install_over_a_differently_cased_file(sandbox: &Path) -> PathBuf {
+    let game_dir = sandbox.join("game");
+    let map = game_dir.join("Maps/Campaign/swarm/zlab02.SC2Map");
+    fs::create_dir_all(&map).unwrap();
+    fs::write(map.join("BankList.xml"), b"previous-mod").unwrap();
+    let archive_path = sandbox.join("lowercase.zip");
+    let mut archive = ZipWriter::new(File::create(&archive_path).unwrap());
+    let options = SimpleFileOptions::default();
+    archive.start_file("Mod/metadata.txt", options).unwrap();
+    archive.write_all(b"title=Lowercase\nauthor=Test\ncampaign=HotS\nversion=1\n").unwrap();
+    archive.start_file("Mod/zlab02.SC2Map/banklist.xml", options).unwrap();
+    archive.write_all(b"package").unwrap();
+    archive.finish().unwrap();
+    let request = InstallRequest {
+        campaign_id: "lowercase".into(), title: "Lowercase".into(), author: "Test".into(), version: "1".into(),
+        profile_dir: None, archive_source: archive_path.display().to_string(), sha256: sha256_file(&archive_path).unwrap(),
+        package_size: None, game_dir: game_dir.display().to_string(),
+    };
+    install_archive(&game_dir, &request, &archive_path, &request.sha256, None).unwrap();
+    game_dir
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+#[test]
+fn a_file_renamed_only_in_letter_case_is_one_file_and_restores() {
+    let sandbox = std::env::temp_dir().join(format!("ccm-case-{}", Uuid::new_v4()));
+    let game_dir = install_over_a_differently_cased_file(&sandbox);
+    let state = read_state_for_target(&game_dir, "Maps/Campaign/swarm").unwrap().unwrap();
+    assert_eq!(state.files.len(), 2, "metadata.txt + one banklist record: {:?}", state.files);
+
+    let restored = restore_original_campaigns_blocking(game_dir.display().to_string(), None, "Maps/Campaign/swarm".into()).unwrap();
+    assert_eq!(restored.conflicts, Vec::<String>::new());
+    assert_eq!(fs::read(game_dir.join("Maps/Campaign/swarm/zlab02.SC2Map/BankList.xml")).unwrap(), b"previous-mod");
+    let _ = fs::remove_dir_all(sandbox);
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+#[test]
+fn a_state_saved_with_a_file_listed_twice_still_restores() {
+    // Installs before the fix recorded the backed-up and the package name apart.
+    let sandbox = std::env::temp_dir().join(format!("ccm-case-old-{}", Uuid::new_v4()));
+    let game_dir = install_over_a_differently_cased_file(&sandbox);
+    let path = state_path_for_target(&game_dir, "Maps/Campaign/swarm").unwrap();
+    let mut state: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    let files = state["files"].as_array_mut().unwrap();
+    let merged = files.iter().position(|file| file["destination"].as_str().unwrap().ends_with("banklist.xml")).unwrap();
+    let mut original = files[merged].clone();
+    original["destination"] = "Maps/Campaign/swarm/zlab02.SC2Map/BankList.xml".into();
+    original["installedSha256"] = serde_json::Value::Null;
+    files[merged]["originalExisted"] = false.into();
+    files[merged]["backupPath"] = serde_json::Value::Null;
+    files.insert(0, original);
+    fs::write(&path, serde_json::to_string(&state).unwrap()).unwrap();
+
+    let restored = restore_original_campaigns_blocking(game_dir.display().to_string(), None, "Maps/Campaign/swarm".into()).unwrap();
+    assert_eq!(restored.conflicts, Vec::<String>::new());
+    assert_eq!(fs::read(game_dir.join("Maps/Campaign/swarm/zlab02.SC2Map/BankList.xml")).unwrap(), b"previous-mod");
+    let _ = fs::remove_dir_all(sandbox);
+}

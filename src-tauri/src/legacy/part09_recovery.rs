@@ -11,12 +11,12 @@ fn record_original_file(
             .strip_prefix(root)
             .map_err(|_| "Campaign backup escaped game directory.")?,
     );
-    if positions.contains_key(&destination) {
+    if positions.contains_key(&path_key(&destination)) {
         return Ok(());
     }
     let backup = backup_root.join(&destination);
     copy_file(original, &backup)?;
-    positions.insert(destination.clone(), files.len());
+    positions.insert(path_key(&destination), files.len());
     files.push(ManagedFile {
         destination: destination.clone(),
         original_existed: true,

@@ -78,10 +78,50 @@ fn read_managed_states(root: &Path) -> Result<Vec<ManagedState>, String> {
 
 fn read_state_file(path: &Path) -> Result<ManagedState, String> {
     let json = fs::read_to_string(path).map_err(io_error)?;
-    let state: ManagedState = serde_json::from_str(&json)
+    let mut state: ManagedState = serde_json::from_str(&json)
         .map_err(|_| "Managed installation state is corrupt; no files were changed.".to_string())?;
     validate_managed_state(&state)?;
+    state.files = merge_case_duplicates(std::mem::take(&mut state.files));
     Ok(state)
+}
+
+/// The key two game paths share when they name the same file. Windows and
+/// macOS file systems ignore letter case, so `BankList.xml` and `banklist.xml`
+/// are one file there.
+fn path_key(path: &str) -> String {
+    if cfg!(any(windows, target_os = "macos")) {
+        path.to_lowercase()
+    } else {
+        path.to_string()
+    }
+}
+
+/// States written before installs compared paths by `path_key` can list one
+/// file twice: the previous mod's copy (`BankList.xml`, backed up) and the
+/// package's (`banklist.xml`). Fold each pair into one record, so the restore
+/// check compares the file with what the package wrote, and a restore puts
+/// the backup back instead of deleting it again as a package-only file.
+fn merge_case_duplicates(files: Vec<ManagedFile>) -> Vec<ManagedFile> {
+    let mut merged: Vec<ManagedFile> = Vec::with_capacity(files.len());
+    let mut positions = HashMap::new();
+    for file in files {
+        let Some(&position) = positions.get(&path_key(&file.destination)) else {
+            positions.insert(path_key(&file.destination), merged.len());
+            merged.push(file);
+            continue;
+        };
+        let kept: &mut ManagedFile = &mut merged[position];
+        kept.original_existed |= file.original_existed;
+        if kept.backup_path.is_none() {
+            kept.backup_path = file.backup_path;
+        }
+        // The package copied its files last, so its name and hash are what's on disk.
+        if file.installed_sha256.is_some() {
+            kept.installed_sha256 = file.installed_sha256;
+            kept.destination = file.destination;
+        }
+    }
+    merged
 }
 
 fn validate_managed_state(state: &ManagedState) -> Result<(), String> {

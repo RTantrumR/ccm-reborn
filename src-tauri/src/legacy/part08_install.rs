@@ -463,10 +463,11 @@ fn backup_campaign_directory(
         }
 }
     for staged in staged_files {
-        if let Some(position) = positions.get(&staged.destination) {
+        if let Some(position) = positions.get(&path_key(&staged.destination)) {
             files[*position].installed_sha256 = Some(staged.sha256.clone());
+            files[*position].destination = staged.destination.clone();
         } else {
-            positions.insert(staged.destination.clone(), files.len());
+            positions.insert(path_key(&staged.destination), files.len());
             files.push(ManagedFile {
                 destination: staged.destination.clone(),
                 original_existed: false,
