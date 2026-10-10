@@ -139,25 +139,26 @@ fn load_catalog_blocking(source: String) -> Result<LoadedCatalog, String> {
 }
 
 #[tauri::command]
-async fn install_campaign(window: tauri::Window, request: InstallRequest) -> Result<InstallResult, String> {
+async fn install_campaign(window: tauri::Window, request: InstallRequest, options: Option<SwitchOptions>) -> Result<InstallResult, String> {
     let reporter = ProgressReporter::new(window);
     tauri::async_runtime::spawn_blocking(move || {
         let root = require_desktop_game_root(&request.game_dir)?;
         let mut request = request;
         request.game_dir = root.display().to_string();
-        install_campaign_with_progress(request, Some(&reporter))
+        install_campaign_with_progress(request, Some(&reporter), options.unwrap_or_default())
     })
         .await
         .map_err(|error| format!("Installation worker failed: {error}"))?
 }
 
 fn install_campaign_blocking(request: InstallRequest) -> Result<InstallResult, String> {
-    install_campaign_with_progress(request, None)
+    install_campaign_with_progress(request, None, SwitchOptions::default())
 }
 
 fn install_campaign_with_progress(
     request: InstallRequest,
     reporter: Option<&ProgressReporter>,
+    options: SwitchOptions,
 ) -> Result<InstallResult, String> {
     reporter.map(|reporter| reporter.status("preparing-install", "Preparing installation…"));
     validate_campaign_id(&request.campaign_id)?;
@@ -189,7 +190,7 @@ fn install_campaign_with_progress(
     // the old install. This prevents a bad download from deleting the current
     // campaign first.
     reporter.map(|reporter| reporter.status("staging", "Verifying and staging package files…"));
-    let result = install_archive(&root, &request, &archive.path, &expected_hash, reporter);
+    let result = install_archive_with(&root, &request, &archive.path, &expected_hash, reporter, options);
     if archive.is_temporary {
         let _ = fs::remove_file(&archive.path);
     }
@@ -200,16 +201,30 @@ fn install_campaign_with_progress(
 }
 
 #[tauri::command]
-async fn restore_original_campaigns(game_dir: String, profile_dir: Option<String>, target_path: String) -> Result<RestoreResult, String> {
+async fn restore_original_campaigns(
+    game_dir: String,
+    profile_dir: Option<String>,
+    target_path: String,
+    options: Option<SwitchOptions>,
+) -> Result<RestoreResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let root = require_desktop_game_root(&game_dir)?;
-        restore_original_campaigns_blocking(root.display().to_string(), profile_dir, target_path)
+        restore_original_campaigns_with(root.display().to_string(), profile_dir, target_path, options.unwrap_or_default())
     })
         .await
         .map_err(|error| format!("Restore worker failed: {error}"))?
 }
 
 fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<String>, target_path: String) -> Result<RestoreResult, String> {
+    restore_original_campaigns_with(game_dir, profile_dir, target_path, SwitchOptions::default())
+}
+
+fn restore_original_campaigns_with(
+    game_dir: String,
+    profile_dir: Option<String>,
+    target_path: String,
+    options: SwitchOptions,
+) -> Result<RestoreResult, String> {
     let root = PathBuf::from(game_dir.trim());
     if !root.is_dir() {
         return Err("Choose an existing StarCraft II directory first.".into());
@@ -223,10 +238,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
     let target = path_string(&safe_campaign_target(&target_path)?);
     adopt_ccm_slot_in_place(&root, &target)?;
     let Some(state) = read_state_for_target(&root, &target)? else {
-        return Ok(RestoreResult {
-            restored_files: 0,
-            conflicts: Vec::new(),
-        });
+        return Ok(RestoreResult::default());
     };
     let staging = manager_root(&root)
         .join("staging")
@@ -277,7 +289,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
                 completed: false,
             },
         )?;
-        let restored = match restore_existing_campaign(&root, &source_target) {
+        let restored = match restore_existing_campaign(&root, &source_target, options) {
             Ok(restored) => restored,
             Err(error) => {
                 if profile_transaction.rollback().is_ok() {
@@ -286,7 +298,7 @@ fn restore_original_campaigns_blocking(game_dir: String, profile_dir: Option<Str
                 return Err(error);
             }
         };
-        if !restored.conflicts.is_empty() {
+        if restored.refused() {
             if profile_transaction.rollback().is_ok() {
                 let _ = fs::remove_file(pending_install_path(&root));
             }

@@ -1,9 +1,21 @@
+#[cfg(test)]
 fn install_archive(
     root: &Path,
     request: &InstallRequest,
     archive_path: &Path,
     expected_hash: &str,
     reporter: Option<&ProgressReporter>,
+) -> Result<InstallResult, String> {
+    install_archive_with(root, request, archive_path, expected_hash, reporter, SwitchOptions::default())
+}
+
+fn install_archive_with(
+    root: &Path,
+    request: &InstallRequest,
+    archive_path: &Path,
+    expected_hash: &str,
+    reporter: Option<&ProgressReporter>,
+    options: SwitchOptions,
 ) -> Result<InstallResult, String> {
     ensure_manager_root(root)?;
     reporter.map(|reporter| reporter.status("verifying-package", "Verifying package integrity…"));
@@ -95,7 +107,7 @@ fn install_archive(
         // files. A changed file is a hard stop; we never guess what is safe to
         // delete.
         reporter.map(|reporter| reporter.status("restoring-previous", "Restoring the previous campaign files safely…"));
-        let previous = match restore_existing_campaign(root, &package.target_path) {
+        let previous = match restore_existing_campaign(root, &package.target_path, options) {
             Ok(previous) => previous,
             Err(error) => {
                 if profile_transaction.rollback().is_ok() {
@@ -104,11 +116,15 @@ fn install_archive(
                 return Err(error);
             }
         };
-        if !previous.conflicts.is_empty() {
+        if previous.refused() {
             if profile_transaction.rollback().is_ok() {
                 let _ = fs::remove_file(pending_install_path(root));
             }
-            return Err("The active campaign has files changed outside CCM Reborn. Restore it manually before updating.".into());
+            return Err(if previous.missing_backups.is_empty() {
+                "Some files of the mod in this campaign were changed after it was installed. Nothing was changed.".into()
+            } else {
+                "Some files CCM Reborn saved before the current mod was installed are gone, so it can't be switched to another mod. Switch to the original campaign first.".into()
+            });
         }
         let state = match backup_campaign_directory(root, request, &package.target_path, &staged_files, adopted_from.clone()) {
             Ok(state) => state,
@@ -207,6 +223,7 @@ fn install_archive(
             manifest_path: manifest_path.display().to_string(),
             package_sha256: expected_hash.to_string(),
             files_installed: staged_files.len(),
+            kept_files: previous.kept_files,
         })
     })();
     // Keep staging data if rollback itself failed: the pending journal refers
@@ -238,45 +255,6 @@ struct PackageFilePlan {
     destination: String,
     size: u64,
 }
-fn installed_manifest_path(root: &Path, target_path: &str) -> Result<PathBuf, String> {
-    let target = safe_campaign_target(target_path)?;
-    let slot = path_string(&target).replace('/', "_");
-    Ok(manager_root(root).join("installed").join(format!("{slot}.json")))
-}
-
-fn installed_manifest_from_staged(
-    _root: &Path,
-    request: &InstallRequest,
-    package: &CcmPackage,
-    package_sha256: &str,
-    staged_files: &[StagedFile],
-) -> InstalledManifest {
-    InstalledManifest {
-        schema_version: INSTALLED_MANIFEST_SCHEMA_VERSION,
-        campaign_id: request.campaign_id.clone(),
-        title: request.title.trim().to_string(),
-        author: request.author.trim().to_string(),
-        version: request.version.trim().to_string(),
-        package_sha256: package_sha256.to_string(),
-        target_path: package.target_path.clone(),
-        installed_at: unix_timestamp(),
-        files: staged_files
-            .iter()
-            .map(|file| InstalledFile {
-                destination: file.destination.clone(),
-                source: file.source.clone(),
-                size: fs::metadata(&file.path).map(|metadata| metadata.len()).unwrap_or(0),
-                sha256: file.sha256.clone(),
-                kind: if file.destination.starts_with("Mods/") {
-                    "package dependency".into()
-                } else {
-                    "package campaign file".into()
-                },
-            })
-            .collect(),
-    }
-}
-
 fn inspect_ccm_package_files(
     archive_path: &Path,
     package: &CcmPackage,

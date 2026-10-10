@@ -65,7 +65,7 @@ const installFlow = {
   setCampaignId: (value: string) => { activeInstallCampaignId = value; },
   setFailure: (value: InstallFailure | null) => { lastInstallFailure = value; },
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
-  inspectDirectory, render, restore: (targetPath: string) => restoreOriginals(targetPath),
+  inspectDirectory, render,
   play: () => playStarcraft(),
   reloadLocalMods: () => localModsContext.reload(),
   onStart: () => { scrollToInstallStatus = true; },
@@ -186,7 +186,7 @@ function bindEvents() {
   bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
-    button.addEventListener("click", () => void restoreOriginals(button.dataset.target ?? ""));
+    button.addEventListener("click", () => requestRestore(installFlow, button.dataset.target ?? ""));
   });
   document.querySelectorAll<HTMLButtonElement>("[data-action='migrate-legacy']").forEach((button) => {
     button.addEventListener("click", () => void migrateLegacySnapshot(button.dataset.campaign ?? ""));
@@ -419,17 +419,6 @@ async function inspectDirectory() {
     message = "A previously interrupted install was restored safely.";
     messageKind = "success";
   }
-}
-
-async function restoreOriginals(targetPath: string) {
-  if (!gameDir || !targetPath) return false;
-  await runTask("Restoring original campaign files…", async () => {
-    const result = await invoke<RestoreResult>("restore_original_campaigns", { gameDir, profileDir: profileDir || null, targetPath });
-    await inspectDirectory();
-    if (result.conflicts.length) return [`Nothing was changed: ${result.conflicts.length} managed files were modified outside CCM Reborn.`, "error"];
-    return result.restoredFiles ? `Original campaign files restored (${result.restoredFiles}).` : "Original campaigns are already active.";
-  });
-  return messageKind === "success";
 }
 
 const migrateLegacySnapshot = (campaignId: string) => runTask("Migrating legacy CCM saves to the selected account…", async () => {

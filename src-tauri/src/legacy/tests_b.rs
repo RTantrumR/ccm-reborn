@@ -40,7 +40,7 @@
             game_dir: game_dir.display().to_string(),
         })
         .unwrap_err();
-        assert!(error.contains("changed outside CCM Reborn"), "{error}");
+        assert!(error.contains("changed after it was installed"), "{error}");
         assert_eq!(fs::read(game_dir.join("Maps/Campaign/mission.SC2Map")).unwrap(), b"user changed");
         let _ = fs::remove_dir_all(sandbox);
     }

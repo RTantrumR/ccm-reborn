@@ -221,6 +221,7 @@ async fn install_ccm_store_mod(
     game_dir: String,
     profile_dir: Option<String>,
     id: String,
+    options: Option<SwitchOptions>,
 ) -> Result<InstallResult, String> {
     let reporter = ProgressReporter::new(window);
     tauri::async_runtime::spawn_blocking(move || {
@@ -245,7 +246,7 @@ async fn install_ccm_store_mod(
             package_size: Some(size),
             game_dir: root.display().to_string(),
         };
-        let result = install_campaign_with_progress(request, Some(&reporter));
+        let result = install_campaign_with_progress(request, Some(&reporter), options.unwrap_or_default());
         let _ = fs::remove_file(&archive);
         result
     })

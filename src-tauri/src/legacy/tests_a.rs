@@ -60,7 +60,7 @@
         assert_eq!(fs::read(game_dir.join("Maps/Campaign/swarm/zchar01.SC2Map")).unwrap(), b"hots-custom");
         assert_eq!(fs::read(game_dir.join("Maps/Campaign/liberty01.SC2Map")).unwrap(), b"wol-custom");
         assert_eq!(read_managed_states(&game_dir).unwrap().len(), 2);
-        restore_existing_campaign(&game_dir, "Maps/Campaign").unwrap();
+        restore_existing_campaign(&game_dir, "Maps/Campaign", SwitchOptions::default()).unwrap();
         assert_eq!(fs::read(game_dir.join("Maps/Campaign/swarm/zchar01.SC2Map")).unwrap(), b"hots-custom");
         assert!(read_state_for_target(&game_dir, "Maps/Campaign/swarm").unwrap().is_some());
         assert!(read_state_for_target(&game_dir, "Maps/Campaign").unwrap().is_none());
@@ -105,7 +105,7 @@
         install_campaign_blocking(request(&wol_archive, "test-wol", "WoL")).unwrap();
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/Core.txt")).unwrap(), b"wol-shared-v2");
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/OtherSlot.txt")).unwrap(), b"wol-only");
-        restore_existing_campaign(&game_dir, "Maps/Campaign/swarm").unwrap();
+        restore_existing_campaign(&game_dir, "Maps/Campaign/swarm", SwitchOptions::default()).unwrap();
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/Core.txt")).unwrap(), b"wol-shared-v2");
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/OtherSlot.txt")).unwrap(), b"wol-only");
         install_campaign_blocking(hots_request).unwrap();
@@ -113,9 +113,9 @@
         assert_eq!(fs::read(game_dir.join("Maps/Campaign/mission.SC2Map")).unwrap(), b"wol-custom");
         assert!(read_state_for_target(&game_dir, "Maps/Campaign").unwrap().is_some());
         assert!(read_state_for_target(&game_dir, "Maps/Campaign/swarm").unwrap().is_some());
-        restore_existing_campaign(&game_dir, "Maps/Campaign").unwrap();
+        restore_existing_campaign(&game_dir, "Maps/Campaign", SwitchOptions::default()).unwrap();
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/Core.txt")).unwrap(), b"hots-shared-v1");
-        restore_existing_campaign(&game_dir, "Maps/Campaign/swarm").unwrap();
+        restore_existing_campaign(&game_dir, "Maps/Campaign/swarm", SwitchOptions::default()).unwrap();
         assert_eq!(fs::read(game_dir.join("Mods/Shared.SC2Mod/Core.txt")).unwrap(), b"vanilla-shared");
         assert!(!game_dir.join("Mods/Shared.SC2Mod/OtherSlot.txt").exists());
         let _ = fs::remove_dir_all(sandbox);
@@ -380,7 +380,7 @@
         fs::create_dir_all(&staging).unwrap();
         let package = read_ccm_package(&v2).unwrap();
         let previous = snapshot_previous_install(&game_dir, &staging, &package.target_path).unwrap().unwrap();
-        assert_eq!(restore_existing_campaign(&game_dir, &package.target_path).unwrap().conflicts, Vec::<String>::new());
+        assert_eq!(restore_existing_campaign(&game_dir, &package.target_path, SwitchOptions::default()).unwrap().conflicts, Vec::<String>::new());
         let staged = extract_ccm_package(&v2, &package, &staging.join("new-package")).unwrap();
         let new_request = request(&v2, "1.1");
         let new_state = backup_campaign_directory(&game_dir, &new_request, &package.target_path, &staged, None).unwrap();
@@ -447,7 +447,7 @@
 
         // Simulates a process dying after `force_restore(old_state)` but
         // before `state.json` and the old backup are retired.
-        force_restore(&game_dir, &previous.state).unwrap();
+        force_restore(&game_dir, &previous.state, false).unwrap();
         assert_eq!(fs::read(campaign_dir.join("mission.SC2Map")).unwrap(), b"vanilla");
         assert_eq!(read_state_for_target(&game_dir, "Maps/Campaign").unwrap().unwrap().campaign_id, "recovery-v1");
         write_pending_install_journal(

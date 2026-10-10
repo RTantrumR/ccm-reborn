@@ -47,39 +47,22 @@ fn snapshot_previous_install(
     let Some(state) = read_state_for_target(root, target)? else {
         return Ok(None);
     };
+    // This only copies what is there now, so a failed switch can put it back.
+    // Whether the switch may go ahead (changed files, lost backups) is decided
+    // by `restore_existing_campaign`, before any game file is touched.
     let backup_root = manager_root(root).join(safe_backup_path(&state.backup_dir)?);
     let backup_snapshot = staging.join("previous-install-backup");
+    // An empty or lost backup copies nothing; the journal still requires the folder.
+    fs::create_dir_all(&backup_snapshot).map_err(io_error)?;
     if backup_root.is_dir() {
-        // An empty backup copies nothing; the journal still requires the folder.
-        fs::create_dir_all(&backup_snapshot).map_err(io_error)?;
         copy_regular_tree(&backup_root, &backup_snapshot)?;
-    } else if state.files.iter().any(|file| file.original_existed) {
-        return Err(format!("Previous backup directory {} is missing; refusing update.", backup_root.display()));
-    } else {
-        fs::create_dir_all(&backup_snapshot).map_err(io_error)?;
     }
     let mut files = Vec::new();
     for managed in state.files.iter().filter(|file| file.installed_sha256.is_some()) {
         let destination = safe_relative_path(&managed.destination)?;
         let current = safe_game_path(root, &destination)?;
         if !current.is_file() {
-            return Err(format!("Active campaign file {} is missing outside CCM Reborn; refusing update.", managed.destination));
-        }
-        let expected = managed.installed_sha256.as_deref().unwrap_or_default();
-        if sha256_file(&current)? != expected {
-            // Mods is intentionally a global repairable cache. Another slot
-            // may have installed a different version of this dependency; it
-            // is not user drift and must not make Repair unavailable.
-            if managed.destination.starts_with("Mods/") {
-                let staged_path = staging.join("previous-install-files").join(&destination);
-                copy_file(&current, &staged_path)?;
-                files.push(PreviousInstalledFile {
-                    destination: managed.destination.clone(),
-                    staged_path,
-                });
-                continue;
-            }
-            return Err(format!("Active campaign file {} was changed outside CCM Reborn; refusing update.", managed.destination));
+            continue;
         }
         let staged_path = staging.join("previous-install-files").join(&destination);
         copy_file(&current, &staged_path)?;
@@ -204,55 +187,27 @@ fn rollback_before_new_state(
     }
 }
 
-fn restore_existing_campaign(root: &Path, target: &str) -> Result<RestoreResult, String> {
+/// Retires the slot's mod and puts back what was there before. Changed files
+/// or lost backups refuse (nothing is touched) unless `options` allows them.
+fn restore_existing_campaign(root: &Path, target: &str, options: SwitchOptions) -> Result<RestoreResult, String> {
     let Some(state) = read_state_for_target(root, target)? else {
-        return Ok(RestoreResult {
-            restored_files: 0,
-            conflicts: Vec::new(),
-        });
+        return Ok(RestoreResult::default());
     };
 
-    let mut conflicts = Vec::new();
-    let shared_roots = shared_dependency_roots(root, &state)?;
-    for file in &state.files {
-        if destination_is_under_roots(&file.destination, &shared_roots) {
-            continue;
-        }
-            let destination = safe_game_path(root, &safe_relative_path(&file.destination)?)?;
-            if !destination.is_file() {
-                // A pre-existing file may legitimately be absent after the
-                // package replaced the whole branch; force_restore will put
-                // it back from the snapshot. A package-owned file, however,
-                // must still exist exactly where the manifest says it does.
-                if file.installed_sha256.is_some() {
-                    conflicts.push(file.destination.clone());
-                }
-                continue;
-            }
-            let expected_hash = file
-                .installed_sha256
-                .clone()
-                .or_else(|| {
-                    file.backup_path.as_deref().and_then(|backup| {
-                        safe_backup_path(backup)
-                            .ok()
-                            .and_then(|path| sha256_file(&manager_root(root).join(path)).ok())
-                    })
-                });
-            match (expected_hash, sha256_file(&destination)) {
-                (Some(expected), Ok(actual)) if actual == expected => {}
-                _ => conflicts.push(file.destination.clone()),
-            }
-    }
-    if !conflicts.is_empty() {
+    let problems = slot_problems(root, &state)?;
+    if (!problems.changed.is_empty() && !options.keep_changed)
+        || (!problems.missing_backups.is_empty() && !options.allow_missing_backups)
+    {
         return Ok(RestoreResult {
-            restored_files: 0,
-            conflicts,
+            conflicts: problems.changed,
+            missing_backups: problems.missing_backups,
+            ..RestoreResult::default()
         });
     }
+    let kept_files = keep_changed_files(root, &state, &problems.changed)?;
 
     archive_installed_manifest(root, &state)?;
-    force_restore(root, &state)?;
+    force_restore(root, &state, options.allow_missing_backups)?;
     remove_state_for_target(root, &state)?;
     retire_unused_shared_baselines(root, &dependency_roots_from_managed_files(&state.files))?;
     let _ = fs::remove_dir_all(manager_root(root).join(&state.backup_dir));
@@ -261,7 +216,8 @@ fn restore_existing_campaign(root: &Path, target: &str) -> Result<RestoreResult,
     }
     Ok(RestoreResult {
         restored_files: state.files.len(),
-        conflicts: Vec::new(),
+        kept_files,
+        ..RestoreResult::default()
     })
 }
 
@@ -297,7 +253,7 @@ fn destination_is_under_roots(destination: &str, roots: &HashSet<PathBuf>) -> bo
         .is_some_and(|root| roots.contains(&root))
 }
 
-fn force_restore(root: &Path, state: &ManagedState) -> Result<(), String> {
+fn force_restore(root: &Path, state: &ManagedState, allow_missing_backups: bool) -> Result<(), String> {
     for directory in &state.cleared_directories {
         clear_campaign_target(root, directory)?;
     }
@@ -335,6 +291,10 @@ fn force_restore(root: &Path, state: &ManagedState) -> Result<(), String> {
                 .ok_or("A backup path is missing from the managed state.")?;
             let backup = manager_root(root).join(safe_backup_path(backup_path)?);
             if !backup.is_file() {
+                // The player chose to switch without it: what was there before is gone.
+                if allow_missing_backups {
+                    continue;
+                }
                 return Err(format!("Backup for {} is missing; refusing to continue.", file.destination));
             }
             copy_file(&backup, &destination)?;
@@ -468,7 +428,7 @@ fn recover_interrupted_install(root: &Path) -> Result<bool, String> {
             return Ok(false);
         }
     }
-    force_restore(root, &transaction)?;
+    force_restore(root, &transaction, false)?;
     if let Ok(path) = installed_manifest_path(root, &transaction.target_path_or_first_clear()) {
         let _ = fs::remove_file(path);
     }

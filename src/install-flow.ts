@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { recheckArchiveMod } from "./archive";
-import { formatBytes, versionTag } from "./domain";
+import { campaignSlot, formatBytes, versionTag } from "./domain";
 import type { InstallAction } from "./domain";
-import type { Campaign, InstallProgress, InstallResult } from "./types";
+import type { Campaign, InstallProgress, InstallResult, RestoreResult } from "./types";
 import type { InstallFailure } from "./install-status";
+import { slotProblem, type SlotCheck } from "./slot-problem";
 
 type MessageKind = "neutral" | "success" | "error";
 type InstallFlow = {
@@ -22,8 +23,6 @@ type InstallFlow = {
   setFailure: (value: InstallFailure | null) => void;
   setMessage: (value: string, kind: MessageKind) => void;
   inspectDirectory: () => Promise<void>;
-  // Switches a campaign back to Blizzard's (Restore original); true when it worked.
-  restore: (targetPath: string) => Promise<boolean>;
   play: () => Promise<void>;
   // An install that runs without the dialog shows its progress on the page.
   onStart: () => void;
@@ -39,11 +38,18 @@ type CloseOutcome = { closed: boolean; savedAs: string | null };
 // mission and close the game, install, then offer to open it again. "unsaved" is a
 // mission the game wouldn't save: the player decides whether to close anyway.
 // "choose" comes first for a new mod: play it now, or only download it ("kept") for My Mods.
-type Stage = "choose" | "kept" | "ask" | "closing" | "unsaved" | "working" | "done" | "failed";
+// "changed" and "lost" come before anything else when the mod being replaced has files the
+// player changed, or backups of what was there before that are gone (part25_slot_check.rs).
+type Stage = "choose" | "kept" | "changed" | "lost" | "ask" | "closing" | "unsaved" | "working" | "done" | "failed";
+type SwitchOptions = { keepChanged?: boolean; allowMissingBackups?: boolean };
 // `action` is decided up front: once installed, the mod is always the current one.
 let modal: {
   pending: Pending; stage: Stage; inMission: boolean | null; action: InstallAction; error: string; savedAs: string | null;
+  check?: SlotCheck; closedGame?: boolean;
 } | null = null;
+// What the player allowed for this switch, and where their changed files were copied.
+let options: SwitchOptions = {};
+let keptFiles: string | null = null;
 
 // The player's local time for the save's name; Windows file names can't hold ":".
 const saveStamp = (now = new Date()) => {
@@ -58,6 +64,10 @@ const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
 const BASE_CAMPAIGNS: Record<string, string> = {
   "Maps/Campaign": "Wings of Liberty", "Maps/Campaign/swarm": "Heart of the Swarm",
   "Maps/Campaign/void": "Legacy of the Void", "Maps/Campaign/nova": "Nova Covert Ops",
+};
+const SLOT_PATHS: Record<string, string> = {
+  "wings-of-liberty": "Maps/Campaign", "heart-of-the-swarm": "Maps/Campaign/swarm",
+  "legacy-of-the-void": "Maps/Campaign/void", "nova-covert-ops": "Maps/Campaign/nova",
 };
 
 const pendingActivity = (phase: string, message: string): InstallProgress => ({
@@ -173,9 +183,28 @@ const actionOf = (flow: InstallFlow, pending: Pending): InstallAction => {
   return campaign ? flow.actionFor(campaign) : "install";
 };
 
+const targetOf = (flow: InstallFlow, pending: Pending) => pending.kind === "restore" ? pending.targetPath
+  : SLOT_PATHS[campaignSlot(flow.campaign(pending.id)?.requirements.campaign ?? "all")];
+
 /// One click installs. Only a running StarCraft II stops it, and then the dialog asks
 /// to close the game first (the backend refuses to switch under it either way).
+/// Before that, the mod being replaced is checked: changed files or lost backups ask first.
 async function begin(flow: InstallFlow, pending: Pending) {
+  options = {}; keptFiles = null;
+  const targetPath = targetOf(flow, pending);
+  const check = targetPath && flow.gameDir()
+    ? await invoke<SlotCheck>("check_slot_switch", { gameDir: flow.gameDir(), targetPath }).catch(() => null) : null;
+  if (check && (check.changed || check.missingBackups)) {
+    modal = { pending, stage: check.missingBackups ? "lost" : "changed", inMission: null, action: actionOf(flow, pending), error: "", savedAs: null, check };
+    flow.render();
+    return;
+  }
+  await proceed(flow, pending);
+}
+
+/// The switch itself, once nothing in the slot needs the player's say. From the
+/// "changed"/"lost" step it stays in the dialog and ends on "done" or "failed".
+async function proceed(flow: InstallFlow, pending: Pending) {
   let status: StarcraftStatus = { running: false, inMission: null };
   try {
     status = await invoke<StarcraftStatus>("starcraft_status");
@@ -183,16 +212,31 @@ async function begin(flow: InstallFlow, pending: Pending) {
     // The backend still refuses a switch under a running game.
   }
   if (status.running) {
-    modal = { pending, stage: "ask", inMission: status.inMission, action: actionOf(flow, pending), error: "", savedAs: null };
+    modal = { ...modal, pending, stage: "ask", inMission: status.inMission, action: actionOf(flow, pending), error: "", savedAs: null };
     flow.render();
     return;
   }
-  flow.onStart();
-  await run(flow, pending);
+  if (!modal) {
+    flow.onStart();
+    await run(flow, pending);
+    return;
+  }
+  await runInDialog(flow, pending);
 }
 
 const run = (flow: InstallFlow, pending: Pending) =>
-  pending.kind === "restore" ? flow.restore(pending.targetPath) : installCampaign(flow, pending.id);
+  pending.kind === "restore" ? restoreSlot(flow, pending.targetPath) : installCampaign(flow, pending.id);
+
+async function runInDialog(flow: InstallFlow, pending: Pending) {
+  if (!modal) return;
+  modal.stage = "working";
+  flow.render();
+  const ok = await run(flow, pending);
+  if (!modal) return;
+  // The page keeps the error too, with its diagnostics.
+  modal = ok ? { ...modal, stage: "done" } : { ...modal, stage: "failed", error: flow.message() };
+  flow.render();
+}
 
 async function closeAndRun(flow: InstallFlow, keepMission: boolean) {
   if (!modal) return;
@@ -209,18 +253,13 @@ async function closeAndRun(flow: InstallFlow, keepMission: boolean) {
       return;
     }
     modal.savedAs = outcome.savedAs;
+    modal.closedGame = true;
   } catch (error) {
     modal = { ...modal, stage: "failed", error: String(error) };
     flow.render();
     return;
   }
-  modal.stage = "working";
-  flow.render();
-  const ok = await run(flow, pending);
-  if (!modal) return;
-  // The page keeps the error too, with its diagnostics.
-  modal = ok ? { ...modal, stage: "done" } : { ...modal, stage: "failed", error: flow.message() };
-  flow.render();
+  await runInDialog(flow, pending);
 }
 
 function heading(flow: InstallFlow, pending: Pending) {
@@ -254,6 +293,10 @@ function body(flow: InstallFlow, current: NonNullable<typeof modal>) {
     case "kept":
       return `<p class="dialog-note">Downloaded. It's in My Mods, ready to switch to.</p>
         <div class="dialog-actions"><button class="ghost" value="cancel" data-action="cancel-install" autofocus>Close</button></div>`;
+    case "changed":
+    case "lost":
+      return slotProblem(current.stage, current.check!, BASE_CAMPAIGNS[targetOf(flow, current.pending) ?? ""] ?? "campaign",
+        current.pending.kind === "install");
     case "ask": {
       const save = current.inMission === false ? ""
         : `<p class="dialog-note">${current.inMission ? "You're in a mission. CCM Reborn" : "If you're in a mission, CCM Reborn"} <strong>saves it before closing</strong>.</p>`;
@@ -275,12 +318,20 @@ function body(flow: InstallFlow, current: NonNullable<typeof modal>) {
       const activity = flow.activity();
       return `<p class="dialog-note">${escapeHtml(activity?.message || (installing ? "Installing…" : "Switching…"))}</p>${progressBar(activity)}`;
     }
-    case "done":
-      return `<p class="dialog-note">${!installing ? "Switched." : action === "update" ? "Updated." : action === "reinstall" ? "Reinstalled." : "Installed."}${current.savedAs ? ` Your mission is saved as <strong>${escapeHtml(current.savedAs)}</strong>.` : ""} Open StarCraft II again?</p>
-        <div class="dialog-actions">
+    case "done": {
+      const kept = keptFiles ? " A copy of your changed files is kept." : "";
+      const show = keptFiles ? '<button class="ghost" data-action="open-kept">Show the copy</button>' : "";
+      const done = `${!installing ? "Switched." : action === "update" ? "Updated." : action === "reinstall" ? "Reinstalled." : "Installed."}${kept}`;
+      if (!current.closedGame) {
+        return `<p class="dialog-note">${done}</p>
+          <div class="dialog-actions">${show}<button class="ghost" value="cancel" data-action="cancel-install" autofocus>Close</button></div>`;
+      }
+      return `<p class="dialog-note">${done}${current.savedAs ? ` Your mission is saved as <strong>${escapeHtml(current.savedAs)}</strong>.` : ""} Open StarCraft II again?</p>
+        <div class="dialog-actions">${show}
           <button class="ghost" value="cancel" data-action="cancel-install">No, thanks</button>
           <button class="go" data-action="reopen-starcraft" autofocus>Open StarCraft II</button>
         </div>`;
+    }
     case "failed":
       return `<p class="dialog-note">${escapeHtml(current.error)}</p>
         <div class="dialog-actions"><button class="ghost" value="cancel" data-action="cancel-install" autofocus>Close</button></div>`;
@@ -346,6 +397,25 @@ export function bindInstallConfirm(flow: InstallFlow) {
     event.preventDefault();
     void closeAndRun(flow, false);
   });
+  dialog.querySelector("[data-action='keep-and-switch']")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!modal) return;
+    options = { keepChanged: true };
+    void proceed(flow, modal.pending);
+  });
+  dialog.querySelector("[data-action='switch-original']")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (!modal) return;
+    const targetPath = modal.pending.kind === "restore" ? modal.pending.targetPath : targetOf(flow, modal.pending);
+    if (!targetPath) return;
+    options = { allowMissingBackups: true, keepChanged: Boolean(modal.check?.changed) };
+    modal.pending = { kind: "restore", targetPath };
+    void proceed(flow, modal.pending);
+  });
+  dialog.querySelector("[data-action='open-kept']")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (keptFiles) void invoke("open_kept_files", { gameDir: flow.gameDir(), path: keptFiles }).catch(() => {});
+  });
   dialog.querySelector("[data-action='reopen-starcraft']")?.addEventListener("click", (event) => {
     event.preventDefault();
     modal = null;
@@ -367,14 +437,38 @@ async function installCampaign(flow: InstallFlow, campaignId: string) {
   try {
     const result = campaign.isCcm
       // Installed in place from the original CCM's folder.
-      ? await invoke<InstallResult>("install_ccm_store_mod", { gameDir, profileDir, id: campaign.id })
-      : await withCurrentPackage(flow, campaign, (current) => invoke<InstallResult>("install_campaign", { request: requestFor(current, gameDir, profileDir) }));
+      ? await invoke<InstallResult>("install_ccm_store_mod", { gameDir, profileDir, id: campaign.id, options })
+      : await withCurrentPackage(flow, campaign, (current) => invoke<InstallResult>("install_campaign", { request: requestFor(current, gameDir, profileDir), options }));
+    keptFiles = result.keptFiles;
     flow.setMessage(`Installed ${[result.title, versionTag(result.version)].filter(Boolean).join(" ")}. Press Play StarCraft II to start.`, "success");
     flow.setActivity(null); flow.setCampaignId("");
     await flow.inspectDirectory();
     return true;
   } catch (error) {
     recordFailure(flow, "preparing-install", error);
+    return false;
+  } finally {
+    flow.setBusy(false); flow.render();
+  }
+}
+
+/// Switches a campaign back to Blizzard's (Restore original); true when it worked.
+async function restoreSlot(flow: InstallFlow, targetPath: string) {
+  const gameDir = flow.gameDir();
+  if (!gameDir || !targetPath) return false;
+  flow.setBusy(true); flow.setMessage("Restoring original campaign files…", "neutral"); flow.render();
+  try {
+    const result = await invoke<RestoreResult>("restore_original_campaigns", { gameDir, profileDir: flow.profileDir() || null, targetPath, options });
+    await flow.inspectDirectory();
+    if (result.conflicts.length || result.missingBackups.length) {
+      flow.setMessage("Nothing was changed: the mod in this campaign has changed files or lost backups. Pick the original campaign again to choose what to do.", "error");
+      return false;
+    }
+    keptFiles = result.keptFiles;
+    flow.setMessage(result.restoredFiles ? `Original campaign files restored (${result.restoredFiles}).` : "Original campaigns are already active.", "success");
+    return true;
+  } catch (error) {
+    flow.setMessage(error instanceof Error ? error.message : String(error), "error");
     return false;
   } finally {
     flow.setBusy(false); flow.render();

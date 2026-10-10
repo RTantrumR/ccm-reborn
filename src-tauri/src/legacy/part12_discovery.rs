@@ -465,6 +465,8 @@ pub fn run() {
             detect_starcraft_profiles,
             get_diagnostic_log_path,
             open_diagnostic_log_directory,
+            check_slot_switch,
+            open_kept_files,
             inspect_local_package,
             add_local_mod,
             list_local_mods,

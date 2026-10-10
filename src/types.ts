@@ -73,7 +73,7 @@ export type Inspection = {
 
 export type GameDirectoryCandidate = { path: string; label: string };
 export type StarcraftProfileCandidate = { path: string; label: string };
-export type RestoreResult = { restoredFiles: number; conflicts: string[] };
+export type RestoreResult = { restoredFiles: number; conflicts: string[]; missingBackups: string[]; keptFiles: string | null };
 export type SavedCampaignSave = {
   relativePath: string;
   modifiedAt: number;
@@ -96,6 +96,7 @@ export type InstallResult = {
   manifestPath: string;
   packageSha256: string;
   filesInstalled: number;
+  keptFiles: string | null;
 };
 export type InstallProgress = {
   operationId: string;

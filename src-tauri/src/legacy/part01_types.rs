@@ -322,13 +322,24 @@ pub struct InstallResult {
     manifest_path: String,
     package_sha256: String,
     files_installed: usize,
+    // Where the player's changed files were copied before the switch.
+    kept_files: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RestoreResult {
     restored_files: usize,
     conflicts: Vec<String>,
+    missing_backups: Vec<String>,
+    kept_files: Option<String>,
+}
+
+impl RestoreResult {
+    /// Nothing was changed: changed files or lost backups the player didn't allow.
+    fn refused(&self) -> bool {
+        !self.conflicts.is_empty() || !self.missing_backups.is_empty()
+    }
 }
 
 #[derive(Debug, Serialize)]
