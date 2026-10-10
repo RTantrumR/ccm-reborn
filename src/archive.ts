@@ -3,8 +3,9 @@ import { bindGallery } from "./gallery";
 import type { Campaign } from "./types";
 
 // The Campaign Archive feed (bot/ in this repo): mods added from Discord posts, with their
-// pictures. Local while it's being tried out; tauri.conf.json's img-src must list it.
-export const ARCHIVE_FEED = "http://127.0.0.1:8791";
+// pictures. It runs on the VM; VITE_ARCHIVE_FEED=http://127.0.0.1:8791 points a dev build at a
+// local bot. tauri.conf.json's CSP must list it (devCsp lists the local one).
+export const ARCHIVE_FEED = import.meta.env.VITE_ARCHIVE_FEED || "https://ccm-reborn-app.hsbg.cards";
 
 type ArchiveMod = {
   id: string; title: string; author: string; campaign: string; version: string | null;

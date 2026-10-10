@@ -21,7 +21,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' asset: data: http://127.0.0.1:8791; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      "csp": "default-src 'self'; connect-src 'self' https://ccm-reborn-app.hsbg.cards; img-src 'self' asset: data: https://ccm-reborn-app.hsbg.cards; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "devCsp": "default-src 'self'; connect-src 'self' https://ccm-reborn-app.hsbg.cards http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' asset: data: https://ccm-reborn-app.hsbg.cards http://127.0.0.1:8791; style-src 'self' 'unsafe-inline'; script-src 'self'"
     }
   },
   "bundle": {
