@@ -467,6 +467,7 @@ pub fn run() {
             open_diagnostic_log_directory,
             check_slot_switch,
             open_kept_files,
+            delete_mod,
             inspect_local_package,
             add_local_mod,
             list_local_mods,

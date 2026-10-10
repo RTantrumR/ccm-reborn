@@ -50,6 +50,25 @@ const SLOTS = [
 
 let installed: InstalledModRecord[] = [];
 let ccmStore: CcmStoreMod[] = [];
+// The slot whose "Switch to" list is open. Kept here: render() rebuilds the page.
+let openPicker = "";
+
+// Original-CCM mods deleted without their folder: the folder stays, My Mods stops listing them.
+const HIDDEN = "ccm-hidden-mods";
+function hiddenMods(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(HIDDEN) ?? "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+export function hideMod(id: string) {
+  try {
+    localStorage.setItem(HIDDEN, JSON.stringify([...new Set([...hiddenMods(), id])]));
+  } catch {
+    // Without storage the mod simply shows again.
+  }
+}
 
 /// Install history plus the original CCM's folder; both live in the game folder.
 export async function refreshInstalledMods(gameDir: string) {
@@ -101,6 +120,8 @@ type Entry = {
   isLocal: boolean;
   isCcm: boolean;
   installable: boolean;
+  // Deleting it can also delete the files it came from (part27_delete_mod.rs).
+  hasOriginal: boolean;
 };
 
 function collectEntries(catalog: Catalog | null): Entry[] {
@@ -111,6 +132,7 @@ function collectEntries(catalog: Catalog | null): Entry[] {
       id: record.campaignId, title: campaign?.title ?? record.title, author: campaign?.author ?? record.author,
       version: campaign?.version ?? record.version, slot: campaignSlot(record.campaign), installedAt: record.installedAt,
       isLocal: Boolean(campaign?.isLocal), isCcm: Boolean(campaign?.isCcm), installable: Boolean(campaign || record.cachedArchive),
+      hasOriginal: Boolean(campaign?.isCcm || campaign?.hasOriginal),
     };
   });
   const listed = new Set(entries.map((entry) => entry.id));
@@ -122,9 +144,11 @@ function collectEntries(catalog: Catalog | null): Entry[] {
       id: campaign.id, title: campaign.title, author: campaign.author, version: campaign.version,
       slot: campaignSlot(campaign.requirements.campaign), installedAt: 0,
       isLocal: Boolean(campaign.isLocal), isCcm: Boolean(campaign.isCcm), installable: true,
+      hasOriginal: Boolean(campaign.isCcm || campaign.hasOriginal),
     });
   }
-  return entries;
+  const hidden = new Set(hiddenMods());
+  return entries.filter((entry) => !hidden.has(entry.id));
 }
 
 const same = (left: string, right: string) => left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
@@ -158,26 +182,36 @@ function renderCurrent(slot: typeof SLOTS[number], playing: { id: string; modifi
   </div>`;
 }
 
+const TRASH = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.8 6.5v5M9.2 6.5v5"/></svg>`;
+
+/// "Switch to": our own dropdown, since a <select> can't hold the trash icons. Each row
+/// switches to that mod; its trash deletes it (not the playing one).
 function renderSwitcher(slot: typeof SLOTS[number], playing: { id: string; modified: boolean }, entries: Entry[], context: MyModsContext) {
   const disabled = !context.gameDir ? 'disabled title="Choose your StarCraft II folder first"'
     : !context.profileDir ? 'disabled title="Choose your StarCraft II account first"'
     : context.busy ? "disabled" : "";
   const unknownMod = playing.modified && !playing.id;
   const sorted = [...entries].sort((left, right) => left.title.localeCompare(right.title) || right.version.localeCompare(left.version));
-  const options = [
+  const current = sorted.find((entry) => entry.id === playing.id);
+  const label = unknownMod ? "A mod that is not in your list" : current ? versioned(current.title, current.version) : `Original ${slot.title}`;
+  const open = openPicker === slot.targetPath && !disabled;
+  const rows = [
     // Back to Blizzard's campaign is safe only when the current mod is recoverable.
-    `<option value="original" ${playing.modified ? "" : "selected"} ${unknownMod ? "disabled" : ""}>Original ${slot.title}</option>`,
-    unknownMod ? '<option value="" selected disabled>A mod that is not in your list</option>' : "",
-    ...sorted.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === playing.id ? "selected" : ""} ${entry.installable ? "" : "disabled"}>${escapeHtml(versioned(entry.title, entry.version))}${entry.installable ? "" : " (no longer available)"}</option>`),
+    `<li><button type="button" class="mod-option ${playing.modified ? "" : "selected"}" data-action="pick-mod" data-value="original" ${unknownMod ? "disabled" : ""}>Original ${slot.title}</button></li>`,
+    ...sorted.map((entry) => {
+      const isPlaying = entry.id === playing.id;
+      const name = escapeHtml(versioned(entry.title, entry.version));
+      return `<li>
+        <button type="button" class="mod-option ${isPlaying ? "selected" : ""}" data-action="pick-mod" data-value="${escapeHtml(entry.id)}" ${entry.installable ? "" : "disabled"}>${name}${entry.installable ? "" : " (no longer available)"}</button>
+        <button type="button" class="mod-trash" data-action="delete-mod" data-campaign="${escapeHtml(entry.id)}" aria-label="Delete ${name}" ${isPlaying ? 'disabled title="Playing now. Switch to another mod first."' : ""}>${TRASH}</button>
+      </li>`;
+    }),
   ].join("");
-  return `<label class="mymods-switch"><span>Switch to</span><select class="mod-switcher" data-switch-target="${slot.targetPath}" ${disabled}>${options}</select></label>`;
-}
-
-function renderAdded(entries: Entry[], context: MyModsContext) {
-  const added = entries.filter((entry) => entry.isLocal);
-  if (!added.length) return "";
-  return `<details class="mymods-added"><summary>Added from your computer</summary>${added.map((entry) => `
-    <div><span>${escapeHtml(versioned(entry.title, entry.version))}</span><button type="button" class="link-action" data-action="remove-local-mod" data-campaign="${escapeHtml(entry.id)}" ${context.busy ? "disabled" : ""}>Remove from list</button></div>`).join("")}</details>`;
+  return `<div class="mymods-switch"><span>Switch to</span>
+    <div class="mod-picker ${open ? "open" : ""}" data-slot="${slot.targetPath}">
+      <button type="button" class="mod-switcher" data-action="toggle-picker" aria-haspopup="listbox" aria-expanded="${open}" ${disabled}><span>${escapeHtml(label)}</span><i aria-hidden="true">▾</i></button>
+      ${open ? `<ul class="mod-picker-list" role="listbox">${rows}</ul>` : ""}
+    </div></div>`;
 }
 
 function renderGroup(slot: typeof SLOTS[number], entries: Entry[], context: MyModsContext) {
@@ -186,7 +220,6 @@ function renderGroup(slot: typeof SLOTS[number], entries: Entry[], context: MyMo
     <p class="eyebrow">${slot.title}</p>
     ${renderCurrent(slot, playing, entries, context)}
     ${renderSwitcher(slot, playing, entries, context)}
-    ${renderAdded(entries, context)}
   </article>`;
 }
 
@@ -198,10 +231,59 @@ export function renderMyMods(context: MyModsContext) {
     renderGroup(slot, entries.filter((entry) => entry.slot === slot.id), context)).join("")}</section>`;
 }
 
-/// Picking a mod (or "Original") asks once, then switches. Cancelling re-renders,
-/// which puts the dropdown back on the current mod.
-export function bindMyMods(onPick: (targetPath: string, value: string) => void) {
-  document.querySelectorAll<HTMLSelectElement>("select[data-switch-target]").forEach((select) => {
-    select.addEventListener("change", () => onPick(select.dataset.switchTarget ?? "", select.value));
+type MyModsActions = {
+  pick: (targetPath: string, value: string) => void;
+  delete: (id: string, title: string, hasOriginal: boolean, isCcm: boolean) => void;
+  render: () => void;
+};
+
+let closeOnOutside: ((event: MouseEvent | KeyboardEvent) => void) | null = null;
+
+/// The open list stays inside the window: a list hanging below it would add a scrollbar and
+/// shift the whole page sideways. It opens upwards when there is more room above, and is no
+/// taller than the room it has.
+function fitOpenList() {
+  const list = document.querySelector<HTMLElement>(".mod-picker.open .mod-picker-list");
+  const button = list?.parentElement?.querySelector<HTMLElement>("[data-action='toggle-picker']");
+  if (!list || !button) return;
+  const margin = 8;
+  const box = button.getBoundingClientRect();
+  const top = document.querySelector<HTMLElement>(".titlebar")?.offsetHeight ?? 0;
+  const below = window.innerHeight - box.bottom - margin;
+  const above = box.top - top - margin;
+  const up = list.scrollHeight > below && above > below;
+  list.classList.toggle("up", up);
+  list.style.maxHeight = `${Math.max(120, Math.min(320, up ? above : below))}px`;
+}
+
+/// Picking a row switches to it (or to "Original"); the trash asks before deleting.
+export function bindMyMods(context: MyModsContext, actions: MyModsActions) {
+  const entries = collectEntries(context.catalog);
+  const setOpen = (slot: string) => { openPicker = slot; actions.render(); };
+  document.querySelectorAll<HTMLElement>(".mod-picker").forEach((picker) => {
+    const slot = picker.dataset.slot ?? "";
+    picker.querySelector("[data-action='toggle-picker']")?.addEventListener("click", () => setOpen(openPicker === slot ? "" : slot));
+    picker.querySelectorAll<HTMLButtonElement>("[data-action='pick-mod']").forEach((option) => option.addEventListener("click", () => {
+      openPicker = "";
+      if (option.classList.contains("selected")) return actions.render();
+      actions.pick(slot, option.dataset.value ?? "");
+    }));
+    picker.querySelectorAll<HTMLButtonElement>("[data-action='delete-mod']").forEach((trash) => trash.addEventListener("click", () => {
+      const entry = entries.find((item) => item.id === trash.dataset.campaign);
+      openPicker = "";
+      if (entry) actions.delete(entry.id, versioned(entry.title, entry.version), entry.hasOriginal, entry.isCcm);
+    }));
   });
+  fitOpenList();
+  // A click elsewhere, or Esc, closes the open list. Registered once.
+  if (!closeOnOutside) {
+    closeOnOutside = (event) => {
+      if (!openPicker) return;
+      // A click inside a list has its own handler (the old element it started on is gone after render()).
+      if (event instanceof KeyboardEvent ? event.key !== "Escape" : (event.target as Element).closest?.(".mod-picker")) return;
+      setOpen("");
+    };
+    document.addEventListener("click", closeOnOutside);
+    document.addEventListener("keydown", closeOnOutside);
+  }
 }

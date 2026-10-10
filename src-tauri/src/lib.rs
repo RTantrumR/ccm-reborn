@@ -25,6 +25,7 @@ include!("legacy/part22_mission_save.rs");
 include!("legacy/part23_hosted_links.rs");
 include!("legacy/part24_save_rehome.rs");
 include!("legacy/part25_slot_check.rs");
+include!("legacy/part27_delete_mod.rs");
 
 #[cfg(test)]
 mod tests_a {
@@ -58,4 +59,11 @@ mod tests_e {
     use super::*;
     use zip::{write::SimpleFileOptions, ZipWriter};
     include!("legacy/tests_e.rs");
+}
+
+#[cfg(test)]
+mod tests_f {
+    use super::*;
+    use zip::{write::SimpleFileOptions, ZipWriter};
+    include!("legacy/tests_f.rs");
 }

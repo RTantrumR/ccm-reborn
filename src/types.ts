@@ -10,6 +10,8 @@ export type Campaign = {
   // Set only for mods the player added from their own computer. Cloud entries
   // leave both undefined so nothing about the existing catalogue changes.
   isLocal?: boolean;
+  // A local mod whose original file is known (it can be deleted with the mod).
+  hasOriginal?: boolean;
   addedAt?: number;
   // A mod in the original CCM's folder (Maps/CustomCampaigns), installed from there in place.
   isCcm?: boolean;
@@ -28,6 +30,8 @@ export type LocalModEntry = {
   campaign: string;
   archiveFile: string;
   archivePath: string;
+  // Where it was added from; part17_local_mods.rs records it for mods added from the PC.
+  sourcePath?: string;
   sha256: string;
   size: number;
   addedAt: number;

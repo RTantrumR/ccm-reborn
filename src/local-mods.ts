@@ -46,6 +46,7 @@ function localCampaign(mod: LocalModEntry): Campaign {
     requirements: { campaign: mod.campaign },
     package: { source: mod.archivePath, sha256: mod.sha256, size: mod.size },
     isLocal: true,
+    hasOriginal: Boolean(mod.sourcePath),
     addedAt: mod.addedAt,
   };
 }
@@ -123,32 +124,11 @@ async function confirmAddLocalMod(context: LocalModsContext) {
   }
 }
 
-async function removeLocalMod(context: LocalModsContext, campaign: Campaign, installed: boolean) {
-  const warning = installed
-    ? " It is installed in StarCraft II right now: that campaign stays exactly as it is, but Reinstall will not work until you add the archive again."
-    : "";
-  if (!window.confirm(`Remove ${campaign.title} from your list? CCM Reborn deletes its own copy of the archive and nothing else.${warning}`)) {
-    return;
-  }
-  context.setBusy(true);
-  context.render();
-  try {
-    await invoke<boolean>("remove_local_mod", { id: campaign.id });
-    await context.reload();
-    context.setMessage(`${campaign.title} was removed from your list.`, "success");
-  } catch (error) {
-    context.setMessage(String(error), "error");
-  } finally {
-    context.setBusy(false);
-    context.render();
-  }
-}
-
 export function localModsHeaderButton(busy: boolean) {
   return `<button class="ghost compact" data-action="add-local-mod" ${busy ? "disabled" : ""}>Add local mod…</button>`;
 }
 
-export function bindLocalModEvents(context: LocalModsContext, campaigns: Campaign[], installedIds: string[]) {
+export function bindLocalModEvents(context: LocalModsContext) {
   document.querySelector<HTMLButtonElement>("[data-action='add-local-mod']")
     ?.addEventListener("click", () => void chooseLocalPackage(context));
   // Both the × and Cancel close it; each must also clear the pending mod, or
@@ -164,10 +144,4 @@ export function bindLocalModEvents(context: LocalModsContext, campaigns: Campaig
       event.preventDefault();
       void confirmAddLocalMod(context);
     });
-  document.querySelectorAll<HTMLButtonElement>("[data-action='remove-local-mod']").forEach((button) => {
-    button.addEventListener("click", () => {
-      const campaign = campaigns.find((item) => item.isLocal && item.id === button.dataset.campaign);
-      if (campaign) void removeLocalMod(context, campaign, installedIds.includes(campaign.id));
-    });
-  });
 }

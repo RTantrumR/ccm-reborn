@@ -5,6 +5,7 @@ import "./styles.css";
 import ccmLogo from "./assets/ccm-logo.png";
 import { mountWindowControls } from "./window-controls";
 import { blockBrowserControls } from "./browser-keys";
+import { bindDeleteDialog, renderDeleteDialog, requestDelete } from "./delete-mod";
 import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
@@ -107,6 +108,7 @@ function render() {
       busy,
     })}
     ${renderInstallConfirm(installFlow)}
+    ${renderDeleteDialog()}
     ${localModDialog()}
   `;
   bindEvents();
@@ -173,7 +175,12 @@ function bindEvents() {
   bindInstallConfirm(installFlow);
   bindArchive((text) => { message = text; messageKind = "error"; render(); });
   fitLibraryDetail();
-  bindMyMods((targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value));
+  bindMyMods({ catalog, inspection, busy, gameDir, profileDir }, {
+    pick: (targetPath, value) => value === "original" ? requestRestore(installFlow, targetPath) : requestInstall(installFlow, value),
+    delete: (id, title, hasOriginal, isCcm) => requestDelete(deleteContext, id, title, hasOriginal, isCcm),
+    render,
+  });
+  bindDeleteDialog(deleteContext);
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
     button.addEventListener("click", () => requestRestore(installFlow, button.dataset.target ?? ""));
@@ -184,11 +191,7 @@ function bindEvents() {
   document.querySelector<HTMLButtonElement>("[data-action='dismiss-status']")?.addEventListener("click", () => { message = ""; render(); });
   document.querySelector<HTMLButtonElement>("[data-action='copy-diagnostics']")?.addEventListener("click", () => void copyDiagnostics());
   document.querySelector<HTMLButtonElement>("[data-action='open-log-folder']")?.addEventListener("click", () => void openDiagnosticLogFolder());
-  bindLocalModEvents(
-    localModsContext,
-    catalog?.campaigns ?? [],
-    inspection?.managedCampaigns.map((campaign) => campaign.id) ?? [],
-  );
+  bindLocalModEvents(localModsContext);
 }
 
 function showSettings() {
@@ -368,6 +371,7 @@ const localModsContext = {
   },
   render,
 };
+const deleteContext = { ...localModsContext, gameDir: () => gameDir, profileDir: () => profileDir };
 
 async function inspectDirectory() {
   await refreshInstalledMods(gameDir);

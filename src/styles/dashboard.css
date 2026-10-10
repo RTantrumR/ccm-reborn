@@ -53,12 +53,22 @@
 .mymods-current span:not(.local-pill) { color: var(--text-body); font: var(--fs-meta) var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mymods-current .local-pill { vertical-align: middle; }
 .mymods-switch { display: grid; gap: 6px; color: var(--text-body); font: 500 var(--fs-body) var(--font-body); }
-.mod-switcher { width: 100%; min-width: 0; padding: 9px 10px; color: var(--text-hi); background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-body) var(--font-body); cursor: pointer; }
-.mod-switcher:hover:not(:disabled) { border-color: var(--border-accent-hi); }
-.mod-switcher:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-tint); }
+/* "Switch to": our own dropdown (my-mods.ts), so each row can carry a trash icon. */
+.mod-picker { position: relative; }
+.mod-switcher { width: 100%; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 9px 10px; color: var(--text-hi); background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-body) var(--font-body); text-align: left; cursor: pointer; }
+.mod-switcher span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mod-switcher i { flex: none; color: var(--text-body); font-style: normal; }
+.mod-switcher:hover:not(:disabled), .mod-picker.open .mod-switcher { border-color: var(--border-accent-hi); }
+.mod-switcher:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-tint); }
 .mod-switcher:disabled { color: var(--text-muted); cursor: not-allowed; }
-.mod-switcher option { color: var(--text-hi); background: var(--bg-row); }
-.mymods-added summary { color: var(--text-body); cursor: pointer; font: var(--fs-meta) var(--font-body); }
-.mymods-added summary:hover { color: var(--text-hi); }
-.mymods-added > div { display: flex; justify-content: space-between; gap: var(--space-3); padding: 6px 0; border-top: 1px solid var(--divider); color: var(--text-body); font: var(--fs-meta) var(--font-body); }
+.mod-picker-list { position: absolute; z-index: 10; top: calc(100% + 4px); left: 0; right: 0; max-height: 320px; overflow-y: auto; margin: 0; padding: var(--space-1); list-style: none; background: var(--bg-row); border: 1px solid var(--border-accent-hi); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, .45); }
+.mod-picker-list.up { top: auto; bottom: calc(100% + 4px); }
+.mod-picker-list li { display: flex; align-items: center; gap: 2px; }
+.mod-option { flex: 1; min-width: 0; padding: 8px 10px; color: var(--text-body); background: transparent; border: 0; border-radius: var(--radius); font: var(--fs-body) var(--font-body); text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.mod-option:hover:not(:disabled) { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.mod-option.selected { color: var(--accent); }
+.mod-option:disabled { color: var(--text-muted); cursor: not-allowed; }
+.mod-trash { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; color: var(--text-body); background: transparent; border: 0; border-radius: var(--radius); cursor: pointer; }
+.mod-trash:hover:not(:disabled) { color: var(--text-hi); background: var(--stop-cta); }
+.mod-trash:disabled { color: var(--text-muted); opacity: .45; cursor: not-allowed; }
 @media (max-width: 1100px) { .mymods { grid-template-columns: 1fr; } }

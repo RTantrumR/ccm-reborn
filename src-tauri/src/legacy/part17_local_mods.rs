@@ -33,6 +33,10 @@ pub struct LocalModRecord {
     sha256: String,
     size: u64,
     added_at: u64,
+    // The file the player added it from, so deleting the mod can delete that too. Only for
+    // a mod added from the PC (a Library download kept for later has no original).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,6 +331,7 @@ fn add_local_mod_at(
         sha256: inspection.sha256,
         size: inspection.size,
         added_at: unix_timestamp(),
+        source_path: overrides.id.is_none().then(|| path_string(&fs::canonicalize(archive_path).unwrap_or_else(|_| archive_path.to_path_buf()))),
     };
     mods.push(record.clone());
     if let Err(error) = write_local_mods(root, &mods) {
