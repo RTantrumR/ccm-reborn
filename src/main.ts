@@ -26,15 +26,13 @@ const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Application root is missing.");
 const root = app;
 
-const communityCatalog = "https://files.ccm-reborn.mikilabs.io/catalog.json";
-const localDevCatalog = "../dev-catalog/catalog.json";
-const defaultCatalog = import.meta.env.DEV ? localDevCatalog : communityCatalog;
-let catalogSource = localStorage.getItem("ccm-catalog-source")?.trim() || defaultCatalog;
+// The Library lists the Campaign Archive (archive.ts); upstream's catalog source is gone.
+localStorage.removeItem("ccm-catalog-source");
 let gameDir = localStorage.getItem("ccm-game-directory") ?? "";
 let profileDir = localStorage.getItem("ccm-profile-directory") ?? "";
 let profileCandidates: StarcraftProfileCandidate[] = [];
+// Mods on this PC (added from disk, and the original CCM's); see local-mods.ts, my-mods.ts.
 let catalog: Catalog | null = null;
-let cloudCatalog: Catalog | null = null;
 let inspection: Inspection | null = null;
 let savedResumes: SavedCampaignResume[] = [];
 type Page = "dashboard" | "mymods" | "library";
@@ -52,7 +50,6 @@ let diagnosticLogPath = "";
 let lastInstallFailure: InstallFailure | null = null;
 let scrollToInstallStatus = false;
 let settingsOpen = false;
-let settingsCatalogSourceDraft = catalogSource;
 let settingsProfileDirDraft = profileDir;
 
 const installFlow = {
@@ -95,7 +92,7 @@ function render() {
       <header>
         <div><h1>${PAGE_TITLES[page]}</h1></div>
         <div class="header-actions">
-          <button class="ghost compact" data-action="refresh-catalog" ${busy || !catalogSource ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
+          <button class="ghost compact" data-action="refresh-catalog" ${busy ? "disabled" : ""}>Check for updates</button>${localModsHeaderButton(busy)}
         </div>${renderGameBanner(gameDir, profileDir)}
       </header>
       ${renderInstallStatus({ message, messageKind, activity: installActivity, failure: lastInstallFailure, logPath: diagnosticLogPath, busy })}
@@ -103,11 +100,9 @@ function render() {
       ${page === "mymods" ? renderMyMods({ catalog, inspection, busy, gameDir, profileDir }) : page === "dashboard" ? renderDashboard({ catalog, inspection, savedResumes, busy, gameDir, profileDir, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) }) : renderLibrary({ catalog, archive: archiveCampaigns(), inspection, selectedId, filter: libraryFilter, busy, gameDir, profileDir, installingCampaignId: activeInstallCampaignId, isCurrentCatalogCampaign: (campaign) => isCurrentCatalogCampaign(campaign, inspection) })}
     </main>
     ${renderSettingsDialog({
-      catalogSourceDraft: settingsCatalogSourceDraft,
       gameDir,
       profileCandidates,
       profileDirDraft: settingsProfileDirDraft,
-      showLocalDevCatalog: import.meta.env.DEV,
       busy,
     })}
     ${renderInstallConfirm(installFlow)}
@@ -153,29 +148,21 @@ function bindEvents() {
   document.querySelector<HTMLDialogElement>("#settings-dialog")?.addEventListener("close", () => {
     settingsOpen = false;
   });
-  const catalogSourceInput = document.querySelector<HTMLInputElement>("#catalog-source");
-  catalogSourceInput?.addEventListener("input", () => {
-    settingsCatalogSourceDraft = catalogSourceInput.value;
-  });
   const profileDirectorySelect = document.querySelector<HTMLSelectElement>("#profile-directory");
   profileDirectorySelect?.addEventListener("change", () => {
     settingsProfileDirDraft = profileDirectorySelect.value;
   });
   document.querySelector<HTMLButtonElement>("[data-action='save-settings']")?.addEventListener("click", (event) => {
     event.preventDefault();
-    catalogSource = settingsCatalogSourceDraft.trim() || defaultCatalog;
     profileDir = settingsProfileDirDraft.trim();
-    localStorage.setItem("ccm-catalog-source", catalogSource);
     if (profileDir) localStorage.setItem("ccm-profile-directory", profileDir);
     else localStorage.removeItem("ccm-profile-directory");
     settingsOpen = false;
     document.querySelector<HTMLDialogElement>("#settings-dialog")?.close();
-    void loadCatalog();
+    void loadLibrary();
   });
   document.querySelectorAll<HTMLButtonElement>("[data-action='choose-directory']").forEach((button) => button.addEventListener("click", () => void chooseGameDirectory()));
-  document.querySelector<HTMLButtonElement>("[data-action='refresh-catalog']")?.addEventListener("click", () => void loadCatalog());
-  document.querySelector<HTMLButtonElement>("[data-action='use-cloud-catalog']")?.addEventListener("click", () => useCatalogSource(communityCatalog));
-  document.querySelector<HTMLButtonElement>("[data-action='use-local-catalog']")?.addEventListener("click", () => useCatalogSource(localDevCatalog));
+  document.querySelector<HTMLButtonElement>("[data-action='refresh-catalog']")?.addEventListener("click", () => void loadLibrary());
   document.querySelector<HTMLButtonElement>("[data-action='detect-directory']")?.addEventListener("click", () => void detectGameDirectory());
   document.querySelectorAll<HTMLButtonElement>("[data-action='choose-profile']").forEach((button) => button.addEventListener("click", () => void chooseProfileDirectory()));
   document.querySelector<HTMLButtonElement>("[data-action='detect-profiles']")?.addEventListener("click", () => void refreshProfiles(true));
@@ -204,7 +191,6 @@ function bindEvents() {
 }
 
 function showSettings() {
-  settingsCatalogSourceDraft = catalogSource;
   settingsProfileDirDraft = profileDir;
   settingsOpen = true;
   const dialog = document.querySelector<HTMLDialogElement>("#settings-dialog");
@@ -226,15 +212,6 @@ async function openDiagnosticLogFolder() {
     messageKind = "error";
     render();
   });
-}
-
-function useCatalogSource(source: string) {
-  catalogSource = source;
-  settingsCatalogSourceDraft = source;
-  settingsOpen = false;
-  localStorage.setItem("ccm-catalog-source", catalogSource);
-  document.querySelector<HTMLDialogElement>("#settings-dialog")?.close();
-  void loadCatalog();
 }
 
 async function resolveGameDirectory(path: string) {
@@ -352,40 +329,26 @@ const detectGameDirectory = () => runTask("Looking for StarCraft II…", async (
   return `Found StarCraft II: ${locations[0].label}`;
 });
 
-async function loadCatalog() {
+/// The Campaign Archive's mods, the mods on this PC, and what is installed.
+async function loadLibrary() {
   // Its end clears "busy", which must stay set while an install runs.
   if (busy) return;
-  if (!catalogSource) {
-    catalog = mergeCatalog(null, await refreshLocalMods());
-    message = "Set a catalog source in Settings.";
-    messageKind = "error";
-    render();
-    return;
-  }
   busy = true;
   message = "Loading campaigns…";
   messageKind = "neutral";
   render();
-  // The archive shows even when the catalog can't be loaded.
-  const archiveLoad = refreshArchive();
   try {
-    cloudCatalog = await invoke<Catalog>("load_catalog", { source: catalogSource });
-    catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
-    selectedId ||= catalog?.campaigns[0]?.id ?? "";
-    message = cloudCatalog.sourceKind === "cached" ? "Offline — showing the last available campaign list." : "";
-    messageKind = cloudCatalog.sourceKind === "cached" ? "neutral" : "success";
+    await refreshArchive();
+    catalog = mergeCatalog(null, await refreshLocalMods());
+    selectedId ||= archiveCampaigns()[0]?.id ?? "";
+    message = "";
     await inspectDirectory();
   } catch (error) {
-    cloudCatalog = null;
-    // Local mods are read from disk, so they stay playable when the cloud
-    // catalogue cannot be reached.
-    catalog = mergeCatalog(null, await refreshLocalMods());
     message = String(error);
     messageKind = "error";
-    // What's installed doesn't depend on the catalog: My Mods must still show it.
+    // What's installed doesn't depend on the Library: My Mods must still show it.
     await inspectDirectory().catch(() => {});
   } finally {
-    await archiveLoad;
     busy = false;
     render();
   }
@@ -397,7 +360,7 @@ const localModsContext = {
   setMessage: (value: string, kind: "neutral" | "success" | "error") => { message = value; messageKind = kind; },
   show: () => { page = "mymods"; window.scrollTo(0, 0); },
   reload: async () => {
-    catalog = mergeCatalog(cloudCatalog, await refreshLocalMods());
+    catalog = mergeCatalog(null, await refreshLocalMods());
     await inspectDirectory();
   },
   render,
@@ -466,8 +429,7 @@ async function boot() {
     }
   }
   if (gameDir) await refreshProfiles();
-  if (catalogSource) await loadCatalog();
-  else render();
+  await loadLibrary();
 }
 
 mountWindowControls();

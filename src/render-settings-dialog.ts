@@ -3,11 +3,9 @@ import { installSetting } from "./install-flow";
 import { profileName } from "./resume";
 
 type SettingsDialogContext = {
-  catalogSourceDraft: string;
   gameDir: string;
   profileCandidates: StarcraftProfileCandidate[];
   profileDirDraft: string;
-  showLocalDevCatalog: boolean;
   busy: boolean;
 };
 
@@ -24,25 +22,18 @@ function profileOptionLabel(path: string, index: number) {
 
 export function renderSettingsDialog(context: SettingsDialogContext) {
   const {
-    catalogSourceDraft,
     gameDir,
     profileCandidates,
     profileDirDraft,
-    showLocalDevCatalog,
     busy,
   } = context;
-  // A catalog reload during an install would mark the app idle while it still works.
+  // Saving reloads the Library; during an install that would mark the app idle while it still works.
   const waiting = busy ? 'disabled title="Wait until the current task finishes"' : "";
   return `
     <dialog id="settings-dialog">
       <form method="dialog" class="dialog-card">
         <button class="close" value="cancel" aria-label="Close">×</button>
-        <p class="eyebrow">SETTINGS</p><h2>Catalog & game location</h2>
-        <label>Catalog source
-          <input id="catalog-source" spellcheck="false" value="${escapeHtml(catalogSourceDraft)}" placeholder="/path/to/catalog.json or https://…/catalog.json" />
-          <small>Releases use the community cloud catalog by default. You can choose another HTTPS catalog or a local development catalog here.</small>
-        </label>
-        <div class="directory-actions"><button type="button" class="ghost" data-action="use-cloud-catalog" ${waiting}>Use community cloud</button>${showLocalDevCatalog ? `<button type="button" class="ghost" data-action="use-local-catalog" ${waiting}>Use local dev catalog</button>` : ""}</div>
+        <p class="eyebrow">SETTINGS</p><h2>Game location</h2>
         <section class="detected-directory">
           <small>STARCRAFT II DIRECTORY</small>
           <strong>${gameDir ? escapeHtml(gameDir) : "No installation detected"}</strong>
@@ -67,7 +58,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
         ${installSetting()}
         <div class="dialog-actions">
           <button class="ghost" value="cancel">Cancel</button>
-          <button class="primary" value="default" data-action="save-settings" ${waiting}>Reload catalog</button>
+          <button class="primary" value="default" data-action="save-settings" ${waiting}>Save</button>
         </div>
       </form>
     </dialog>`;

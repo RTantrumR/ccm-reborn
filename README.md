@@ -68,6 +68,9 @@ unless someone has specifically explained why they are needed.
 The sections below are for contributors, catalogue publishers, and anyone
 building CCM Reborn locally. Players normally only need the release above.
 
+This fork's app no longer reads a catalogue: its Library is the Campaign Archive
+(`bot/`). The catalogue tooling below is upstream's and is kept for reference.
+
 CCM Reborn installs the existing CCM ZIP layout; it does **not** invent a package format. A valid package has one `metadata.txt`; its `campaign=` value determines the campaign destination:
 
 | `metadata.txt` value | SC2 directory managed by CCM Reborn |
@@ -173,7 +176,7 @@ Each catalog entry requires metadata for display and a verified package:
 }
 ```
 
-`package.path` is for a catalog selected from disk and is resolved relative to `catalog.json`. The catalog source itself is selected deliberately by the user in the app.
+`package.path` is for a catalog selected from disk and is resolved relative to `catalog.json`.
 
 ## Cloudflare publishing
 
@@ -206,7 +209,7 @@ The publisher creates readable immutable archive names such as
 }
 ```
 
-Point **Settings** at the HTTPS URL for `catalog.json`. The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
+The Rust backend fetches the catalog and package, so browser CORS is not part of the client path.
 
 After publishing, verify every public package size with `npm run catalog:smoke`.
 Add `-- --verify f-yuri-of-the-swarm` to download and verify one package's SHA-256 too.
