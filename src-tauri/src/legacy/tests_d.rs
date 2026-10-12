@@ -264,7 +264,7 @@ fn local_catalog_leaves_out_mods_with_missing_packages() {
     let _ = fs::remove_dir_all(root);
 }
 
-// The key and counter match the archive bot's (bot/src/hosts.ts), whose download of this
+// The key and counter match the archive bot's, whose download of this
 // file matched the real package's SHA-256.
 #[test]
 fn mega_links_yield_the_file_key() {

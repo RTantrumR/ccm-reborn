@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { bindGallery } from "./gallery";
 import type { Campaign } from "./types";
 
-// The Campaign Archive feed (bot/ in this repo): mods added from Discord posts, with their
+// The Campaign Archive feed (the archive bot, kept privately): mods added from Discord posts, with their
 // pictures. It runs on the VM; VITE_ARCHIVE_FEED=http://127.0.0.1:8791 points a dev build at a
 // local bot. tauri.conf.json's CSP must list it (devCsp lists the local one).
 export const ARCHIVE_FEED = import.meta.env.VITE_ARCHIVE_FEED || "https://ccm-reborn-app.hsbg.cards";
@@ -43,7 +43,7 @@ const toCampaign = (mod: ArchiveMod): Campaign => ({
 export async function refreshArchive(): Promise<{ count: number } | { problem: string }> {
   try {
     const response = await fetch(`${ARCHIVE_FEED}/catalog.json`, { signal: AbortSignal.timeout(5000) });
-    // The feed's per-address limit (bot/src/ratelimit.ts).
+    // The feed's per-address limit.
     if (response.status === 429) return { problem: "The Library was checked many times in a row. Try again in a minute." };
     if (!response.ok) throw new Error(`feed answered ${response.status}`);
     const feed = (await response.json()) as { mods: ArchiveMod[] };

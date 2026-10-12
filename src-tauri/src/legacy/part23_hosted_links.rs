@@ -1,7 +1,7 @@
 // Campaign Archive mods install straight from the link their author posted (MEGA, Google
 // Drive). A MEGA link carries the file's key: the API gives a temporary download address,
 // and the file arrives AES-128-CTR encrypted, the same length as the original. The archive
-// bot (bot/src/hosts.ts) downloads it the same way and records the size and SHA-256 that
+// bot downloads it the same way and records the size and SHA-256 that
 // the download is checked against.
 
 type MegaCipher = ctr::Ctr128BE<aes::Aes128>;
