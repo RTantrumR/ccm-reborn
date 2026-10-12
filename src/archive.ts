@@ -10,6 +10,8 @@ export const ARCHIVE_FEED = import.meta.env.VITE_ARCHIVE_FEED || "https://ccm-re
 type ArchiveMod = {
   id: string; title: string; author: string; campaign: string; version: string | null;
   description: string; downloadUrl: string; docsUrl: string | null; images: string[];
+  // The Discord post the mod was added from (missing from feeds before 2026-10-12).
+  postUrl?: string;
   // Set when the bot downloaded the package and checked the app can install it.
   package: { sha256: string; size: number; fileName: string } | null;
 };
@@ -34,7 +36,7 @@ const toCampaign = (mod: ArchiveMod): Campaign => ({
   requirements: { campaign: CAMPAIGN_NAMES[mod.campaign] ?? mod.campaign },
   // A verified package installs from its link like a catalog download (MEGA links are decrypted on the way).
   package: mod.package ? { source: mod.downloadUrl, sha256: mod.package.sha256, size: mod.package.size } : { source: "", sha256: "", size: 0 },
-  link: { download: mod.downloadUrl, docs: mod.docsUrl },
+  link: { download: mod.downloadUrl, docs: mod.docsUrl, post: mod.postUrl ?? null },
   images: mod.images.slice(0, 5).map((path) => `${ARCHIVE_FEED}${path}`),
 });
 

@@ -10,7 +10,7 @@ Nova Covert Ops) holds its own mod, and your saves stay with the mod that made t
 ## What it does
 
 - **Library**: the mods shared in the GiantGrantGames Custom Campaign Manager community, with
-  pictures, descriptions and patch notes.
+  pictures, descriptions, patch notes and a link to each mod's Discord thread.
 - **One-click install**: the download is checked before anything in the game folder changes, and
   the campaign it replaces is backed up first. A mod that can't be checked yet opens its download
   page instead.

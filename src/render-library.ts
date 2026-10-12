@@ -63,12 +63,19 @@ function linkedText(text: string) {
   return html + escapeHtml(text.slice(last));
 }
 
+// The mod's patch notes and the Discord post it was added from, opened in the browser.
+function renderPageLinks(link: Campaign["link"]) {
+  const button = (url: string | null | undefined, label: string) =>
+    url ? `<button class="ghost" data-action="open-link" data-url="${escapeHtml(url)}">${label}</button>` : "";
+  return `${button(link?.docs, "Patch notes")}${button(link?.post, "Discord thread")}`;
+}
+
 // An archive mod is downloaded from its author’s page in the browser.
 function renderLinkRow(link: NonNullable<Campaign["link"]>) {
   const host = hostName(link.download);
   return `<div class="install-row">
     <button class="primary install" data-action="open-link" data-url="${escapeHtml(link.download)}">${host ? `Download from ${escapeHtml(host)}` : "Download"}</button>
-    ${link.docs ? `<button class="ghost" data-action="open-link" data-url="${escapeHtml(link.docs)}">Patch notes</button>` : ""}
+    ${renderPageLinks(link)}
   </div>`;
 }
 
@@ -81,8 +88,7 @@ function renderInstallRow(campaign: Campaign, context: LibraryContext) {
   const action = installAction(campaign, context.inspection);
   const label = action === "reinstall" ? "Reinstall" : `${action === "update" ? "Update to" : "Install"} ${escapeHtml(versionTag(campaign.version))}`.trim();
   const button = `<button class="${action === "reinstall" ? "ghost" : "primary install"}" data-action="install" data-campaign="${escapeHtml(campaign.id)}" ${disabled}>${working ? "Working…" : label}</button>`;
-  const docs = campaign.link?.docs ? `<button class="ghost" data-action="open-link" data-url="${escapeHtml(campaign.link.docs)}">Patch notes</button>` : "";
-  return `<div class="install-row">${button}${docs}</div>`;
+  return `<div class="install-row">${button}${renderPageLinks(campaign.link)}</div>`;
 }
 
 function renderLibraryDetail(campaign: Campaign, context: LibraryContext) {
