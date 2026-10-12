@@ -29,7 +29,10 @@ Nova Covert Ops) holds its own mod, and your saves stay with the mod that made t
 1. Download the latest release from
    [Releases](https://github.com/RTantrumR/ccm-reborn/releases/latest):
    `setup.exe` for Windows, `.dmg` for macOS, `.deb` or AppImage for Linux.
-   Windows may say the publisher is unknown: choose **More info → Run anyway**.
+   The app isn't signed yet, so each system asks once:
+   Windows says the publisher is unknown: choose **More info → Run anyway**.
+   macOS blocks the first start: open **System Settings → Privacy & Security** and choose
+   **Open Anyway**. The AppImage needs to be made executable (`chmod +x`).
 2. Open the app. It finds StarCraft II and your account by itself; if it can't, it asks you to
    choose them.
 3. Pick a mod in the **Library**, press **Install**, then **Play**.
