@@ -25,6 +25,12 @@ try installs and switches during development.
 To point a dev build at a local Campaign Archive feed, set
 `VITE_ARCHIVE_FEED=http://127.0.0.1:8791`.
 
+The app asks GitHub for the latest release on every start. To test updates without a
+release, a debug build takes `CCM_RELEASES_API` (a stand-in for
+`https://api.github.com/repos/RTantrumR/ccm-reborn/releases/latest`) and
+`CCM_UPDATE_ALLOW_LOCAL=1` (lets it download the installer from `127.0.0.1`). Release builds
+ignore both.
+
 ## Checks
 These run in CI on Windows, macOS and Linux for every push and pull request:
 ```sh
@@ -51,7 +57,8 @@ git tag v1.0.1
 git push origin main v1.0.1
 ```
 The tag has to match the manifests' version. A version with a suffix (`1.1.0-beta.1`) is
-published as a pre-release.
+published as a pre-release, which the app's update check skips. Keep the Windows installer's
+name ending in `-setup.exe`: that is the file the app downloads and checks when updating.
 
 ## Mod package format
 The app installs the original CCM's ZIP layout. A package has one `metadata.txt`; its
