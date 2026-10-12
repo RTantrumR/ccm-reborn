@@ -137,3 +137,54 @@ fn saves_go_only_when_asked_and_a_playing_mod_is_refused() {
     assert!(refused.contains("playing right now"), "{refused}");
     assert!(store.is_dir());
 }
+
+// App updates (part28): which release counts as newer, which file is the installer, and
+// which hosts a download may come from.
+#[test]
+fn a_release_is_newer_only_by_its_numbers() {
+    assert!(is_newer("v1.0.1", "1.0.0"));
+    assert!(is_newer("1.10.0", "1.9.9"));
+    assert!(!is_newer("v1.0.0", "1.0.0"));
+    assert!(!is_newer("v0.9.9", "1.0.0"));
+    assert!(!is_newer("nightly", "1.0.0"));
+    assert!(!is_newer("v1.1", "1.0.0"));
+    assert_eq!(version_parts("1.2.3-beta.1"), Some((1, 2, 3)));
+}
+
+fn release_with(assets: Vec<GithubAsset>) -> GithubRelease {
+    GithubRelease { tag_name: "v1.0.1".into(), html_url: "https://github.com/x/y/releases/tag/v1.0.1".into(), assets }
+}
+
+fn asset(name: &str, digest: Option<&str>) -> GithubAsset {
+    GithubAsset {
+        name: name.into(),
+        browser_download_url: format!("https://github.com/x/y/releases/download/v1.0.1/{name}"),
+        size: 10,
+        digest: digest.map(str::to_string),
+    }
+}
+
+#[test]
+fn the_installer_is_the_setup_exe_with_a_recorded_sha256() {
+    let sha = "AB".repeat(32);
+    let release = release_with(vec![
+        asset("CCM.Reborn_1.0.1_universal.dmg", Some(&format!("sha256:{sha}"))),
+        asset("CCM.Reborn_1.0.1_x64-setup.exe", Some(&format!("sha256:{sha}"))),
+    ]);
+    let (found, expected) = windows_installer(&release).unwrap();
+    assert_eq!(found.name, "CCM.Reborn_1.0.1_x64-setup.exe");
+    assert_eq!(expected, "ab".repeat(32));
+    assert!(windows_installer(&release_with(vec![asset("a_x64-setup.exe", None)])).is_none());
+    assert!(windows_installer(&release_with(vec![asset("a_x64-setup.exe", Some("md5:00"))])).is_none());
+}
+
+#[test]
+fn update_downloads_stay_on_github() {
+    let host = |url: &str| is_github_host(&reqwest::Url::parse(url).unwrap());
+    assert!(host("https://github.com/x/y/releases/download/v1/a.exe"));
+    assert!(host("https://objects.githubusercontent.com/a"));
+    assert!(host("https://release-assets.githubusercontent.com/a"));
+    assert!(!host("http://github.com/a"));
+    assert!(!host("https://evilgithub.com/a"));
+    assert!(!host("https://github.com.example.com/a"));
+}

@@ -6,6 +6,7 @@ import ccmLogo from "./assets/ccm-logo.png";
 import { mountWindowControls } from "./window-controls";
 import { blockBrowserControls } from "./browser-keys";
 import { bindDeleteDialog, renderDeleteDialog, requestDelete } from "./delete-mod";
+import { bindAppUpdateDialog, checkForAppUpdate, renderAppUpdateDialog } from "./app-update";
 import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
@@ -109,6 +110,7 @@ function render() {
     })}
     ${renderInstallConfirm(installFlow)}
     ${renderDeleteDialog()}
+    ${renderAppUpdateDialog(busy)}
     ${localModDialog()}
   `;
   bindEvents();
@@ -117,6 +119,7 @@ function render() {
   if (addLocalDialog && !addLocalDialog.open) addLocalDialog.showModal();
   const settingsDialog = document.querySelector<HTMLDialogElement>("#settings-dialog");
   if (settingsOpen && settingsDialog && !settingsDialog.open) settingsDialog.showModal();
+  bindAppUpdateDialog({ render });
   if (scrollToInstallStatus) {
     scrollToInstallStatus = false;
     window.requestAnimationFrame(() => {
@@ -451,6 +454,7 @@ void listen<InstallProgress>("install-progress", ({ payload }) => {
   render();
 });
 void boot();
+void checkForAppUpdate({ render });
 window.addEventListener("focus", () => {
   if (!gameDir || busy) return;
   void inspectDirectory().then(render).catch(() => {

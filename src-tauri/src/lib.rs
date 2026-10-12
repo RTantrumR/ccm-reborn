@@ -26,6 +26,7 @@ include!("legacy/part23_hosted_links.rs");
 include!("legacy/part24_save_rehome.rs");
 include!("legacy/part25_slot_check.rs");
 include!("legacy/part27_delete_mod.rs");
+include!("legacy/part28_app_update.rs");
 
 #[cfg(test)]
 mod tests_a {

@@ -481,7 +481,9 @@ pub fn run() {
             open_web_link,
             download_package,
             close_starcraft,
-            resolve_starcraft_profile
+            resolve_starcraft_profile,
+            check_app_update,
+            install_app_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running CCM Reborn");
