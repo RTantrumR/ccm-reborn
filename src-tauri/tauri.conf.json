@@ -28,6 +28,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "TantrumUA",
+    "copyright": "Copyright 2026 TantrumUA",
     "icon": [
       "icons/icon.png",
       "icons/icon.icns",
