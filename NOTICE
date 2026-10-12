@@ -24,5 +24,8 @@ Images not covered by the Apache License:
   - src/assets/campaigns/*.png: StarCraft II campaign logos,
     (c) Blizzard Entertainment, Inc.
 
+  - The Discord logo on "Discord thread" buttons (path data from Simple Icons,
+    https://simpleicons.org, CC0 1.0). Discord is a trademark of Discord Inc.
+
 StarCraft is a trademark of Blizzard Entertainment, Inc. This project is an
 unofficial, fan-made tool and is not affiliated with or endorsed by Blizzard.

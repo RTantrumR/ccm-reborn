@@ -41,7 +41,7 @@ button { cursor: pointer; }
 /* Buttons. Each kind has four legible states: rest, hover, pressed, disabled.
    Rest is flat (no glow, no inset highlight) so it never reads as pressed.
    Disabled is flat grey with a not-allowed cursor, never a busy cursor. */
-.primary, .ghost, .go, .stop {
+.primary, .ghost, .go, .stop, .discord {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -63,6 +63,11 @@ button { cursor: pointer; }
 .stop { color: var(--text-hi); background: var(--stop-cta); }
 .stop:hover:not(:disabled) { background: var(--stop-cta-hover); }
 .stop:active:not(:disabled) { background: var(--stop-deep); }
+/* A link to a Discord post, in Discord's own colour and logo. */
+.discord { color: var(--text-hi); background: var(--discord); }
+.discord:hover:not(:disabled) { background: var(--discord-hover); }
+.discord:active:not(:disabled) { background: var(--discord-deep); }
+.discord svg { width: 18px; height: 18px; flex: none; }
 .ghost { color: var(--text-body); background: transparent; border-color: var(--border-accent-hi); font-weight: 500; }
 .ghost:hover:not(:disabled) { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .ghost:active:not(:disabled) { background: var(--bg-btn-ghost-active); }

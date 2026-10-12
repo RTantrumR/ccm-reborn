@@ -54,6 +54,9 @@
   --stop-cta: #b23a2a;              /* red buttons under white text (AA 5.9:1) */
   --stop-cta-hover: #c2412f;
   --stop-deep: #8a2c20;
+  --discord: #5865f2;               /* Discord's blurple, under white text (AA 4.6:1) */
+  --discord-hover: #4752c4;
+  --discord-deep: #3c45a5;
 
   /* Type */
   --font-display: "Archivo", "Noto Sans", "Segoe UI", sans-serif;
