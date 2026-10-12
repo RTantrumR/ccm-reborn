@@ -87,5 +87,3 @@ Everything is read-only except `install` and `restore`, which need a typed confi
 - `src-tauri/src/legacy/`: the Rust core, split into numbered parts with their tests.
 - `src-tauri/src/bin/ccm.rs`: the command-line tool.
 - `scripts/`: build, release and version scripts.
-- `catalog/`, `dev-catalog/`, `scripts/discord/`, `scripts/hygraph/`, `skills/`, `docs/cms/`:
-  the original project's catalogue tooling, not used by this fork's app.
