@@ -1,4 +1,5 @@
 import type { Campaign, Catalog, CurrentCampaign, Inspection } from "./types";
+import { renderLibrarySort, sortLibrary } from "./library-sort";
 import { byline, campaignSlot, formatBytes, installAction, isCommunityCampaign, versionTag } from "./domain";
 import { renderGallery } from "./gallery";
 
@@ -127,12 +128,12 @@ function renderCard(campaign: Campaign, selected: Campaign | null, context: Libr
 
 function renderFilters(active: string) {
   return `<div class="library-filters" role="toolbar" aria-label="Campaign">${FILTERS.map((filter) =>
-    `<button class="filter-chip${filter.id ? ` faction-${filter.id}` : ""}${filter.id === active ? " active" : ""}" data-page="library" data-library-filter="${filter.id}" aria-pressed="${filter.id === active}" title="${filter.name}">${filter.label}</button>`).join("")}</div>`;
+    `<button class="filter-chip${filter.id ? ` faction-${filter.id}` : ""}${filter.id === active ? " active" : ""}" data-page="library" data-library-filter="${filter.id}" aria-pressed="${filter.id === active}" title="${filter.name}">${filter.label}</button>`).join("")}${renderLibrarySort()}</div>`;
 }
 
 export function renderLibrary(context: LibraryContext) {
-  const campaigns = [...(context.catalog?.campaigns ?? []), ...context.archive].filter((campaign) => isCommunityCampaign(campaign)
-    && (!context.filter || campaignSlot(campaign.requirements.campaign) === context.filter));
+  const campaigns = sortLibrary([...(context.catalog?.campaigns ?? []), ...context.archive].filter((campaign) => isCommunityCampaign(campaign)
+    && (!context.filter || campaignSlot(campaign.requirements.campaign) === context.filter)));
   // The selection follows the filter: a pick outside it falls back to the first visible one.
   const selected = campaigns.find((campaign) => campaign.id === context.selectedId) ?? campaigns[0] ?? null;
   const list = campaigns.length

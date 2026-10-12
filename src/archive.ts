@@ -12,6 +12,7 @@ type ArchiveMod = {
   description: string; downloadUrl: string; docsUrl: string | null; images: string[];
   // The Discord post the mod was added from (missing from feeds before 2026-10-12).
   postUrl?: string;
+  updatedAt?: string;
   // Set when the bot downloaded the package and checked the app can install it.
   package: { sha256: string; size: number; fileName: string } | null;
 };
@@ -38,6 +39,7 @@ const toCampaign = (mod: ArchiveMod): Campaign => ({
   package: mod.package ? { source: mod.downloadUrl, sha256: mod.package.sha256, size: mod.package.size } : { source: "", sha256: "", size: 0 },
   link: { download: mod.downloadUrl, docs: mod.docsUrl, post: mod.postUrl ?? null },
   images: mod.images.slice(0, 5).map((path) => `${ARCHIVE_FEED}${path}`),
+  updatedAt: mod.updatedAt,
 });
 
 /** Reloads the archive's mods. When the feed can't be reached the last list stays, and the

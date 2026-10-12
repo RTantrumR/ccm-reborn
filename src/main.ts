@@ -12,6 +12,7 @@ import type {
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
 import { fitLibraryDetail, keepLibraryScroll, renderLibrary } from "./render-library";
+import { bindLibrarySort } from "./library-sort";
 import { findCampaign, installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
 import { migrateLegacyProfile, renderLegacyMigration } from "./legacy-migration";
@@ -184,6 +185,7 @@ function bindEvents() {
     render,
   });
   bindDeleteDialog(deleteContext);
+  bindLibrarySort(render);
   document.querySelector<HTMLButtonElement>("[data-action='play-sc2']")?.addEventListener("click", () => void playStarcraft());
   document.querySelectorAll<HTMLButtonElement>("[data-action='restore']").forEach((button) => {
     button.addEventListener("click", () => requestRestore(installFlow, button.dataset.target ?? ""));

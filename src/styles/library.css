@@ -5,6 +5,11 @@
 .filter-chip { padding: 5px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--border-muted); border-radius: var(--radius); font: 500 var(--fs-meta) var(--font-body); }
 .filter-chip:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .filter-chip.active { color: var(--text-hi); background: var(--accent-tint); border-color: var(--faction, var(--accent)); }
+/* The sort dropdown sits at the row's right end. */
+.library-sort { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; color: var(--text-body); font: 500 var(--fs-meta) var(--font-body); }
+.library-sort select { color-scheme: dark; padding: 5px 8px; color: var(--text-hi); background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: var(--radius); font: 500 var(--fs-meta) var(--font-body); cursor: pointer; }
+.library-sort select:hover { border-color: var(--border-accent-hi); }
+.library-sort select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .campaign-list { display: grid; align-content: start; gap: 2px; }
 
 .campaign-card {

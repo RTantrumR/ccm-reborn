@@ -19,6 +19,8 @@ export type Campaign = {
   link?: { download: string; docs: string | null; post: string | null };
   // Picture URLs, at most 5; the first one leads.
   images?: string[];
+  // When the archive last changed it (ISO time), for the Library's order.
+  updatedAt?: string;
 };
 
 export type LocalModEntry = {
