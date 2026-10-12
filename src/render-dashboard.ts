@@ -24,6 +24,8 @@ const PREVIEW_COUNT = 5;
 
 type DashboardContext = {
   catalog: Catalog | null;
+  // The Campaign Archive: with no catalog source any more, this is where the mods are.
+  archive: Campaign[];
   inspection: Inspection | null;
   savedResumes: SavedCampaignResume[];
   busy: boolean;
@@ -39,7 +41,7 @@ export function renderDashboard(context: DashboardContext) {
 function renderSlot(slot: typeof slots[number], context: DashboardContext) {
   const current = context.inspection?.activeCampaigns.find((campaign) => campaign.slot === slot.id);
   const options = sortCampaignsByRecentPlay(
-    context.catalog?.campaigns.filter((campaign) => isCommunityCampaign(campaign) && campaignSlot(campaign.requirements.campaign) === slot.id) ?? [],
+    [...(context.catalog?.campaigns ?? []), ...context.archive].filter((campaign) => isCommunityCampaign(campaign) && campaignSlot(campaign.requirements.campaign) === slot.id),
     context.savedResumes,
   );
   // An unmodified slot is Blizzard's campaign; say so instead of the backend's "untracked" wording.
@@ -69,7 +71,7 @@ function renderPreview(campaign: Campaign, slotId: string, context: DashboardCon
   const progress = resumeSummary(resumeFor(context.savedResumes, campaign.id));
   return `
     <article class="install-option">
-      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(byline(campaign.author, versionTag(campaign.version), formatBytes(campaign.package.size)))}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
+      <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(byline(campaign.author, versionTag(campaign.version), campaign.package.size ? formatBytes(campaign.package.size) : ""))}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
       <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }
