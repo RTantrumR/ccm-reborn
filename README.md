@@ -19,8 +19,8 @@ Nova Covert Ops) holds its own mod, and your saves stay with the mod that made t
   Blizzard's original, and the saves of each mod go with it.
 - **Play**: starts StarCraft II through Battle.net. If the game is running when you switch a
   mod, the app offers to close it and saves your mission first.
-- **Updates**: the app tells you when a new version is out. On Windows, **Update** downloads it
-  and opens the usual setup wizard.
+- **Updates**: the app tells you when a new version is out. On Windows, **Update** downloads it,
+  installs it and restarts the app.
 - **Works with the original CCM**: mods it left in your game folder show up in My Mods, and you
   can add a mod from a `.zip` on your computer.
 

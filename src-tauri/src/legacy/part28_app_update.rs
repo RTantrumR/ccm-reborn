@@ -201,10 +201,11 @@ async fn install_app_update(app: tauri::AppHandle, window: tauri::Window) -> Res
     let installer = tauri::async_runtime::spawn_blocking(move || download_app_installer(&window))
         .await
         .map_err(|error| format!("Update failed: {error}"))??;
-    // The installer replaces the app's files, so the app closes once the wizard has started.
-    // It gets none of the app's handles: the wizard outlives the app.
+    // Update mode: no wizard pages and no uninstall step (which fails when the publisher name
+    // changed), only a progress window, and the installer restarts the app when done. The app
+    // closes right away so its files can be replaced; the installer gets none of its handles.
     let null = std::process::Stdio::null;
-    Command::new(&installer).stdin(null()).stdout(null()).stderr(null()).spawn().map_err(|error| {
+    Command::new(&installer).args(["/P", "/R", "/UPDATE"]).stdin(null()).stdout(null()).stderr(null()).spawn().map_err(|error| {
         append_diagnostic_log(&format!("app update start: {error}"));
         "The installer couldn't be started.".to_string()
     })?;
