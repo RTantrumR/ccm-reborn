@@ -7,6 +7,8 @@ Nova Covert Ops) holds its own mod, and your saves stay with the mod that made t
 **Beta.** 1.0.0 is this fork's first release. Expect rough edges and please
 [report what breaks](https://github.com/RTantrumR/ccm-reborn/issues).
 
+![The Campaigns page: each campaign with the mod it is playing now and the mods available for it](screenshots/campaigns.png)
+
 ## What it does
 
 - **Library**: the mods shared in the GiantGrantGames Custom Campaign Manager community, with
@@ -23,6 +25,13 @@ Nova Covert Ops) holds its own mod, and your saves stay with the mod that made t
   installs it and restarts the app.
 - **Works with the original CCM**: mods it left in your game folder show up in My Mods, and you
   can add a mod from a `.zip` on your computer.
+
+<p align="center">
+  <img src="screenshots/library.png" width="24%" alt="Library: the community mods, with one selected" />
+  <img src="screenshots/library-lotv.png" width="24%" alt="Library filtered to Legacy of the Void" />
+  <img src="screenshots/my-mods.png" width="24%" alt="My Mods: one card per campaign with a Switch to list" />
+  <img src="screenshots/settings.png" width="24%" alt="Settings: game folder and StarCraft II profile" />
+</p>
 
 ## Install
 
