@@ -55,6 +55,8 @@ let lastInstallFailure: InstallFailure | null = null;
 let scrollToInstallStatus = false;
 let settingsOpen = false;
 let settingsProfileDirDraft = profileDir;
+// What a Settings action just did, shown in the dialog next to the buttons it belongs to.
+let settingsNote: { text: string; kind: MessageKind; area: "game" | "profile" } | null = null;
 
 const installFlow = {
   gameDir: () => gameDir, profileDir: () => profileDir,
@@ -108,6 +110,7 @@ function render() {
       profileCandidates,
       profileDirDraft: settingsProfileDirDraft,
       busy,
+      note: settingsNote,
     })}
     ${renderInstallConfirm(installFlow)}
     ${renderDeleteDialog()}
@@ -154,6 +157,11 @@ function bindEvents() {
   });
   document.querySelector<HTMLDialogElement>("#settings-dialog")?.addEventListener("close", () => {
     settingsOpen = false;
+    // Reopening shows the dialog as rendered, so a leftover note must be rendered away now.
+    if (settingsNote) {
+      settingsNote = null;
+      render();
+    }
   });
   const profileDirectorySelect = document.querySelector<HTMLSelectElement>("#profile-directory");
   profileDirectorySelect?.addEventListener("change", () => {
@@ -234,12 +242,10 @@ async function chooseGameDirectory() {
     const game = await resolveGameDirectory(selected);
     setGameDirectory(game);
     await refreshProfiles();
-    message = `StarCraft II directory selected: ${game.label}`;
-    messageKind = "success";
+    report("game", `StarCraft II directory selected: ${game.label}`, "success");
     await inspectDirectory();
   } catch (error) {
-    message = String(error);
-    messageKind = "error";
+    report("game", String(error), "error");
   }
   render();
 }
@@ -261,11 +267,9 @@ async function chooseProfileDirectory() {
   try {
     const profile = await resolveProfile(selected);
     useProfile(profile);
-    message = `StarCraft II account selected: ${profile.label}`;
-    messageKind = "success";
+    report("profile", `StarCraft II account selected: ${profile.label}`, "success");
   } catch (error) {
-    message = String(error);
-    messageKind = "error";
+    report("profile", String(error), "error");
   }
   render();
 }
@@ -285,14 +289,12 @@ async function refreshProfiles(showMessage = false) {
     // automatically so a first-run player never has to open Settings.
     if (!profileDir && profileCandidates.length) useProfile(profileCandidates[0]);
     if (showMessage) {
-      message = profileCandidates.length ? `${profileCandidates.length} StarCraft II profile(s) found.` : "No StarCraft II profiles were found.";
-      messageKind = profileCandidates.length ? "success" : "error";
+      report("profile", profileCandidates.length ? `${profileCandidates.length} StarCraft II profile(s) found.` : "No StarCraft II profiles were found.", profileCandidates.length ? "success" : "error");
       render();
     }
   } catch (error) {
     if (showMessage) {
-      message = String(error);
-      messageKind = "error";
+      report("profile", String(error), "error");
       render();
     }
   }
@@ -310,19 +312,27 @@ function setGameDirectory(game: GameDirectoryCandidate) {
 
 type MessageKind = "neutral" | "success" | "error";
 
+/// A Settings action answers next to its buttons while the dialog is open (closing it drops
+/// the note); started from elsewhere, it answers in the status bar.
+function report(area: "game" | "profile", text: string, kind: MessageKind) {
+  if (settingsOpen) settingsNote = { text, kind, area };
+  else [message, messageKind] = [text, kind];
+}
+
 /// One busy operation: shows `working` with a spinner while every action is
-/// disabled, then reports the task's result, or its error, in the status bar.
-async function runTask(working: string, task: () => Promise<string | [string, MessageKind]>) {
+/// disabled, then reports the task's result, or its error, in the status bar
+/// (or, for a Settings action, next to its buttons).
+async function runTask(working: string, task: () => Promise<string | [string, MessageKind]>, area?: "game" | "profile") {
   busy = true;
-  message = working;
-  messageKind = "neutral";
+  const say = (text: string, kind: MessageKind) => area ? report(area, text, kind) : ([message, messageKind] = [text, kind]);
+  say(working, "neutral");
   render();
   try {
     const result = await task();
-    [message, messageKind] = typeof result === "string" ? [result, "success"] : result;
+    if (typeof result === "string") say(result, "success");
+    else say(...result);
   } catch (error) {
-    message = error instanceof Error ? error.message : String(error);
-    messageKind = "error";
+    say(error instanceof Error ? error.message : String(error), "error");
   } finally {
     busy = false;
     render();
@@ -336,7 +346,7 @@ const detectGameDirectory = () => runTask("Looking for StarCraft II…", async (
   await refreshProfiles();
   await inspectDirectory();
   return `Found StarCraft II: ${locations[0].label}`;
-});
+}, "game");
 
 /// The Campaign Archive's mods, the mods on this PC, and what is installed. `asked`: the
 /// player pressed Check for updates, so a good result is said too.

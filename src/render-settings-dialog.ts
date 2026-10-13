@@ -8,6 +8,8 @@ type SettingsDialogContext = {
   profileCandidates: StarcraftProfileCandidate[];
   profileDirDraft: string;
   busy: boolean;
+  // The answer to the last action here, under the buttons it belongs to.
+  note: { text: string; kind: "neutral" | "success" | "error"; area: "game" | "profile" } | null;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) =>
@@ -27,7 +29,9 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
     profileCandidates,
     profileDirDraft,
     busy,
+    note,
   } = context;
+  const noteFor = (area: "game" | "profile") => note?.area === area ? `<p class="settings-note ${note.kind}" role="status">${escapeHtml(note.text)}</p>` : "";
   // Saving reloads the Library; during an install that would mark the app idle while it still works.
   const waiting = busy ? 'disabled title="Wait until the current task finishes"' : "";
   return `
@@ -44,6 +48,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
           <button type="button" class="ghost" data-action="choose-directory">Choose folder…</button>
           <button type="button" class="ghost" data-action="detect-directory">Detect again</button>
         </div>
+        ${noteFor("game")}
         <label>StarCraft II profile
           <select id="profile-directory">
             <option value="">Choose before applying an install…</option>
@@ -56,6 +61,7 @@ export function renderSettingsDialog(context: SettingsDialogContext) {
           <button type="button" class="ghost" data-action="choose-profile">Choose profile…</button>
           <button type="button" class="ghost" data-action="detect-profiles">Find profiles</button>
         </div>
+        ${noteFor("profile")}
         ${installSetting()}
         ${appUpdateSetting()}
         <div class="dialog-actions">

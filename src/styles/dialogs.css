@@ -33,6 +33,10 @@ dialog::backdrop { background: rgba(10, 11, 13, .72); backdrop-filter: blur(3px)
 #settings-dialog .directory-actions, #settings-dialog .dialog-actions { flex-wrap: wrap; }
 .app-update-row { align-items: center; margin-top: 0; }
 .app-update-row span { color: var(--text-body); font: var(--fs-body)/1.45 var(--font-body); }
+/* The answer to a Settings action, right under its buttons. */
+.settings-note { margin: -4px 0 0; padding: 8px 10px; color: var(--text-body); background: var(--bg-inset); border-left: 3px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; font: var(--fs-body)/1.45 var(--font-body); overflow-wrap: anywhere; }
+.settings-note.success { border-left-color: var(--status-ok); }
+.settings-note.error { border-left-color: var(--status-danger); }
 
 #add-local-mod-dialog .metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; background: none; border: 0; }
 #add-local-mod-dialog .metadata > div { display: grid; gap: var(--space-1); padding: 10px; background: var(--bg-inset); border: 1px solid var(--border-accent); border-radius: var(--radius); }
