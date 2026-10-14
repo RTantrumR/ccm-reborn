@@ -1,7 +1,7 @@
 /* Library: campaign list (left) + detail pane (right). */
 .workspace { display: grid; grid-template-columns: minmax(0, 350px) minmax(0, 1fr); align-items: start; gap: var(--space-5); }
 .library-workspace { margin-top: 0; }
-.library-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
+.library-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-3); }
 .filter-chip { padding: 5px 12px; color: var(--text-muted); background: transparent; border: 1px solid var(--border-muted); border-radius: var(--radius); font: 500 var(--fs-meta) var(--font-body); }
 .filter-chip:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .filter-chip.active { color: var(--text-hi); background: var(--accent-tint); border-color: var(--faction, var(--accent)); }
@@ -16,6 +16,20 @@
 .sort-menu button:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
 .sort-menu button[aria-checked="true"] { color: var(--text-hi); background: var(--accent-tint); }
 
+.library-search { position: relative; display: flex; align-items: center; }
+.library-search > svg { position: absolute; left: 10px; width: 15px; height: 15px; color: var(--text-muted); pointer-events: none; }
+.library-search input { width: 100%; padding: 8px 34px; color: var(--text-hi); background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: var(--radius); font: var(--fs-body) var(--font-body); }
+.library-search input::placeholder { color: var(--text-muted); }
+.library-search input::-webkit-search-cancel-button { display: none; }
+.library-search input:hover { border-color: var(--border-accent-hi); }
+.library-search input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.search-clear { position: absolute; right: 4px; display: none; width: 26px; height: 26px; padding: 0; color: var(--text-body); background: transparent; border: 0; border-radius: var(--radius); font-size: 18px; line-height: 1; }
+.search-clear:hover { color: var(--text-hi); background: var(--bg-btn-ghost-hover); }
+.library-search.has-query .search-clear { display: block; }
+.search-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 var(--space-3); }
+.search-pills:empty { margin: 0 0 var(--space-3); }
+.search-pill { padding: 2px 8px; color: var(--text-body); border: 1px solid var(--border-muted); border-radius: 999px; font: 500 var(--fs-meta) var(--font-body); }
+.search-pill.author { color: var(--accent); border-color: var(--accent); background: var(--accent-tint); }
 .campaign-list { display: grid; align-content: start; gap: 2px; }
 
 .campaign-card {
@@ -33,12 +47,16 @@
   border-radius: var(--radius);
   transition: background-color .12s ease, box-shadow .12s ease;
 }
+.campaign-card { cursor: pointer; }
 .campaign-card:hover { background: var(--bg-row-hover); }
 /* Inset ring, so the left edge keeps the campaign colour. */
 .campaign-card.selected { background: var(--bg-row-hover); box-shadow: inset 0 0 0 1px var(--accent); }
 .campaign-copy { min-width: 0; }
 .campaign-copy h2 { margin: 0 0 var(--space-1); font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .campaign-copy p { margin: 0; color: var(--text-faint); font: var(--fs-meta) var(--font-body); }
+/* An author's name searches for their mods: it reads as text until pointed at. */
+.author-link { padding: 0; color: inherit; background: none; border: 0; font: inherit; text-align: left; }
+.author-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .installed { align-self: start; padding: 2px 6px; color: var(--status-ok); border: 1px solid currentColor; border-radius: var(--radius); font: 600 var(--fs-meta) var(--font-body); letter-spacing: .06em; }
 
 /* Sticky under the sticky header, so a pick far down the list visibly lands.

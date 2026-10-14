@@ -11,7 +11,8 @@ import type {
   Campaign, Catalog, GameDirectoryCandidate, Inspection,
   InstallProgress, RestoreResult, SavedCampaignResume, StarcraftProfileCandidate,
 } from "./types";
-import { fitLibraryDetail, keepLibraryScroll, renderLibrary } from "./render-library";
+import { bindLibrary, fitLibraryDetail, keepLibraryView, renderLibrary } from "./render-library";
+import { setLibraryQuery } from "./library-search";
 import { bindLibrarySort } from "./library-sort";
 import { findCampaign, installAction, isCommunityCampaign, isCurrentCatalogCampaign } from "./domain";
 import { resumeFor } from "./resume";
@@ -77,7 +78,7 @@ const installFlow = {
 };
 
 function render() {
-  const restoreLibraryScroll = keepLibraryScroll();
+  const restoreLibraryView = keepLibraryView();
   root.innerHTML = `
     <aside class="sidebar">
       <div class="brand"><img class="brand-mark" src="${ccmLogo}" alt=""><span>CCM <b>REBORN</b></span></div>
@@ -118,7 +119,7 @@ function render() {
     ${localModDialog()}
   `;
   bindEvents();
-  restoreLibraryScroll();
+  restoreLibraryView();
   const addLocalDialog = document.querySelector<HTMLDialogElement>("#add-local-mod-dialog");
   if (addLocalDialog && !addLocalDialog.open) addLocalDialog.showModal();
   const settingsDialog = document.querySelector<HTMLDialogElement>("#settings-dialog");
@@ -142,15 +143,15 @@ function bindEvents() {
       // View, See all and the filter chips also choose what the Library shows.
       if (button.dataset.libraryFilter !== undefined) libraryFilter = button.dataset.libraryFilter;
       if (button.dataset.select) selectedId = button.dataset.select;
+      // A campaign's See all and a mod's View show it whatever was searched before.
+      if (button.dataset.clearSearch !== undefined) setLibraryQuery("");
       window.scrollTo(0, 0);
       render();
     });
   });
-  document.querySelectorAll<HTMLButtonElement>("[data-library-campaign]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedId = button.dataset.libraryCampaign ?? "";
-      render();
-    });
+  bindLibrary((id) => {
+    selectedId = id;
+    render();
   });
   document.querySelectorAll<HTMLButtonElement>("[data-action='show-settings']").forEach((button) => {
     button.addEventListener("click", () => showSettings());

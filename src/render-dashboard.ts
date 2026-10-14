@@ -61,7 +61,7 @@ function renderSlot(slot: typeof slots[number], context: DashboardContext) {
         <div class="current-campaign-copy"><small>PLAYING NOW</small><strong>${escapeHtml(currentTitle)}</strong>${currentMeta ? `<span>${escapeHtml(currentMeta)}</span>` : ""}${activeResume?.latestSave ? `<div class="resume-instruction"><strong>Continue from ${escapeHtml(resumeCheckpoint(activeResume) ?? "your last save")}</strong><span>${escapeHtml(resumeInstruction(activeResume.latestSave))}</span></div>` : ""}</div>
       </section>
       <section class="alternatives">
-        <div class="alternative-heading"><small>MODS</small>${options.length > PREVIEW_COUNT ? `<button class="see-all" data-page="library" data-library-filter="${slot.id}">See all</button>` : ""}</div>
+        <div class="alternative-heading"><small>MODS</small>${options.length > PREVIEW_COUNT ? `<button class="see-all" data-page="library" data-library-filter="${slot.id}" data-clear-search>See all</button>` : ""}</div>
         ${options.length ? options.slice(0, PREVIEW_COUNT).map((campaign) => renderPreview(campaign, slot.id, context)).join("") : '<p class="no-options">No mods for this campaign yet. Check for updates, or add one from your computer.</p>'}
       </section>
     </article>`;
@@ -72,6 +72,6 @@ function renderPreview(campaign: Campaign, slotId: string, context: DashboardCon
   return `
     <article class="install-option">
       <div class="option-copy"><strong><span class="option-title">${escapeHtml(campaign.title)}</span>${context.isCurrentCatalogCampaign(campaign) ? '<span class="installed">CURRENT</span>' : ""}</strong><span>${escapeHtml(byline(campaign.author, versionTag(campaign.version), campaign.package.size ? formatBytes(campaign.package.size) : ""))}</span>${progress ? `<span class="option-progress">${escapeHtml(progress)}</span>` : ""}</div>
-      <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-select="${escapeHtml(campaign.id)}">View</button>
+      <button class="ghost compact" data-page="library" data-library-filter="${slotId}" data-clear-search data-select="${escapeHtml(campaign.id)}">View</button>
     </article>`;
 }
